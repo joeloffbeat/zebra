@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ZEBRA DESIGN SYSTEM — PURE BLACK & WHITE, ALL CAPS */
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 0 0% 0%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 0%;
+    --primary: 0 0% 0%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 0%;
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+    --accent: 0 0% 96%;
+    --accent-foreground: 0 0% 0%;
+    --destructive: 0 0% 0%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 0 0% 0%;
+    --input: 0 0% 0%;
+    --ring: 0 0% 0%;
+    --radius: 0px;
+  }
+
+  .dark {
+    --background: 0 0% 0%;
+    --foreground: 0 0% 100%;
+    --card: 0 0% 0%;
+    --card-foreground: 0 0% 100%;
+    --popover: 0 0% 0%;
+    --popover-foreground: 0 0% 100%;
+    --primary: 0 0% 100%;
+    --primary-foreground: 0 0% 0%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 0 0% 100%;
+    --muted: 0 0% 15%;
+    --muted-foreground: 0 0% 65%;
+    --accent: 0 0% 15%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 0% 100%;
+    --destructive-foreground: 0 0% 0%;
+    --border: 0 0% 100%;
+    --input: 0 0% 100%;
+    --ring: 0 0% 100%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: "Inter", system-ui, sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
+  /* ALL CAPS BY DEFAULT */
+  h1, h2, h3, h4, h5, h6, p, span, a, button, label, th, td {
+    text-transform: uppercase;
+  }
+
+  /* EXCEPTION FOR MONO/DATA */
+  .font-mono, code, pre {
+    text-transform: none;
+  }
+}
+
+/* CUSTOM SCROLLBAR — MINIMAL */
+::-webkit-scrollbar {
+  width: 4px;
+  height: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--foreground) / 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--foreground) / 0.5);
+}
+
+/* SELECTION */
+::selection {
+  background: hsl(var(--foreground));
+  color: hsl(var(--background));
+}
+
+/* BRACKET BUTTON STYLE */
+.bracket-btn {
+  @apply inline-flex items-center justify-center;
+  @apply text-xs tracking-widest;
+  @apply transition-opacity duration-200;
+  @apply hover:opacity-60;
+}
+
+.bracket-btn::before {
+  content: "[";
+  @apply mr-1;
+}
+
+.bracket-btn::after {
+  content: "]";
+  @apply ml-1;
+}
+
+/* ZEBRA STRIPE PATTERN */
+.zebra-stripes {
+  background: repeating-linear-gradient(
+    90deg,
+    hsl(var(--foreground)) 0px,
+    hsl(var(--foreground)) 20px,
+    transparent 20px,
+    transparent 40px
+  );
+}
+
+/* UTILITY: NO CAPS */
+.normal-case {
+  text-transform: none !important;
+}
