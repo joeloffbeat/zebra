@@ -229,3 +229,122 @@ User                          Zebra Contract              Matching Engine
 Matching Engine                    Zebra Contract
       │                                  │
       │ 1. Monitor commitments           │
+      │ 2. Receive encrypted orders      │
+      │    (optional, for matching)      │
+      │ 3. Find cross:                   │
+      │    buy_price >= sell_price       │
+      │                                  │
+      │ ─── triggerReveal(buyer, seller) ─▶│
+      │                                  │
+      │                    4. Notify both parties
+```
+
+### 3. Reveal & Settle
+
+```
+Buyer                 Seller              Zebra Contract           DeepBook
+  │                      │                       │                     │
+  │ ─── reveal(order, secret) ──────────────────▶│                     │
+  │                      │                       │                     │
+  │                      │ ─── reveal(order, secret) ─▶│              │
+  │                      │                       │                     │
+  │                      │          5. Verify both reveals            │
+  │                      │          6. Calculate exec price           │
+  │                      │                       │                     │
+  │                      │                       │ ── settle(trade) ──▶│
+  │                      │                       │                     │
+  │                      │                       │ ◀── confirmation ───│
+  │                      │                       │                     │
+  │ ◀────────────── funds transferred ──────────▶│                     │
+```
+
+---
+
+## Privacy Properties
+
+| Property | Guarantee |
+|----------|-----------|
+| Order price hidden | Until reveal (after match) |
+| Order size hidden | Until reveal (after match) |
+| Order direction hidden | Until reveal (after match) |
+| User identity | Public (Sui address) |
+| Proof of validity | On-chain (trustless) |
+
+**What's NOT hidden:**
+- That you placed an order (commitment is public)
+- Your Sui address
+- Approximate timing
+
+**Future enhancement:** zkLogin integration for anonymous order submission
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|-----------|------------|
+| Blockchain | Sui |
+| Smart Contracts | Move |
+| ZK Proofs | Groth16 (Circom + snarkjs) |
+| On-chain Verification | sui::groth16 |
+| Orderbook | DeepBook v3 |
+| Cross-chain | LI.FI Composer |
+| Frontend | React + Next.js |
+| Sui SDK | @mysten/sui.js |
+
+---
+
+## Sponsor Alignment
+
+### Sui ($10k)
+
+- **Best Overall Project** ($3k): Meaningful use of Sui capabilities
+- **Notable Projects** ($1k each): Working prototype with clear strength
+
+**Why we qualify:**
+- Native Groth16 verification (sui::groth16 module)
+- DeepBook v3 integration for settlement
+- Move smart contracts
+- PTBs for atomic operations
+
+### LI.FI ($6k)
+
+- **Best Use of LI.FI Composer in DeFi** ($2.5k): Cross-chain deposits
+
+**Why we qualify:**
+- Users deposit from any EVM chain to Sui
+- Swap + Bridge + Deposit in one transaction
+- Solves real UX problem (onboarding to Sui)
+
+---
+
+## Roadmap
+
+### Hackathon MVP
+- [ ] Groth16 circuit for order validity
+- [ ] Move contract with on-chain verification
+- [ ] Basic matching engine
+- [ ] DeepBook v3 settlement
+- [ ] LI.FI deposit integration
+- [ ] React frontend
+
+### Post-Hackathon
+- [ ] zkLogin integration for anonymous orders
+- [ ] Multi-asset support
+- [ ] Partial fills
+- [ ] Order modification (cancel + re-submit)
+- [ ] Mobile app
+
+---
+
+## Team
+
+- **Gabriel** - Full Stack + Smart Contracts
+
+---
+
+## Links
+
+- GitHub: github.com/gabrielantonyxaviour/zebra
+- Twitter: @gabrielaxy
+- ENS: gabrielaxy.eth
