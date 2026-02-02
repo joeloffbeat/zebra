@@ -113,3 +113,119 @@ Constraints:
 ```
 
 **Curve**: BN254 or BLS12-381 (both supported by Sui's groth16 module)
+
+---
+
+## Sui Integration
+
+### On-Chain Groth16 Verification
+
+```move
+module zebra::dark_pool {
+    use sui::groth16;
+
+    public fun submit_order(
+        commitment: vector<u8>,
+        proof_points: vector<u8>,
+        public_inputs: vector<u8>,
+        ctx: &mut TxContext
+    ) {
+        // Prepare verification key (pre-computed, stored on-chain)
+        let pvk = groth16::prepare_verifying_key(&groth16::bn254(), &VK_BYTES);
+
+        // Verify the ZK proof on-chain
+        let valid = groth16::verify_groth16_proof(
+            &groth16::bn254(),
+            &pvk,
+            &public_inputs,
+            &proof_points
+        );
+
+        assert!(valid, EInvalidProof);
+
+        // Store commitment, lock funds
+        // ...
+    }
+}
+```
+
+### DeepBook v3 Settlement
+
+```move
+module zebra::settlement {
+    use deepbook::pool;
+    use deepbook::balance_manager;
+
+    public fun settle_match(
+        pool: &mut Pool<BaseAsset, QuoteAsset>,
+        buyer_reveal: OrderReveal,
+        seller_reveal: OrderReveal,
+        // ...
+    ) {
+        // Verify reveals match commitments
+        assert!(hash(buyer_reveal) == buyer_commitment, ERevealMismatch);
+        assert!(hash(seller_reveal) == seller_commitment, ERevealMismatch);
+
+        // Calculate execution price (midpoint)
+        let exec_price = (buyer_reveal.price + seller_reveal.price) / 2;
+
+        // Execute via DeepBook
+        pool::place_market_order(pool, ...);
+    }
+}
+```
+
+---
+
+## Cross-Chain Deposits (LI.FI)
+
+Users can deposit from any EVM chain:
+
+```typescript
+import { getQuote, executeRoute } from '@lifi/sdk';
+
+async function depositToZebra(fromChain: string, token: string, amount: string) {
+    const quote = await getQuote({
+        fromChain,
+        toChain: 'sui',
+        fromToken: token,
+        toToken: 'USDC', // Sui USDC
+        fromAmount: amount,
+        toAddress: userSuiAddress,
+    });
+
+    // Execute swap + bridge + deposit in one transaction
+    await executeRoute(quote);
+}
+```
+
+---
+
+## Order Flow
+
+### 1. Place Hidden Order
+
+```
+User                          Zebra Contract              Matching Engine
+  │                                  │                            │
+  │ 1. Generate secret locally       │                            │
+  │ 2. Create commitment             │                            │
+  │ 3. Generate ZK proof             │                            │
+  │                                  │                            │
+  │ ─── submit(commitment, proof) ──▶│                            │
+  │                                  │                            │
+  │                    4. Verify proof on-chain                   │
+  │                    5. Lock funds                              │
+  │                    6. Store commitment                        │
+  │                                  │                            │
+  │                                  │ ─── OrderCommitted event ──▶│
+  │                                  │                            │
+  │ ◀─────── confirmation ───────────│                            │
+```
+
+### 2. Order Matching
+
+```
+Matching Engine                    Zebra Contract
+      │                                  │
+      │ 1. Monitor commitments           │
