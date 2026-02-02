@@ -1,0 +1,41 @@
+# Secrets
+.env
+.env.*
+!.env.example
+
+# AI tooling
+.claude/
+.agents/
+.mcp.json
+
+# Playwright
+.playwright-data/
+.playwright-mcp/
+
+# Dependencies
+node_modules/
+package-lock.json
+
+# Build
+.next/
+out/
+/build/
+
+# ZK circuits - large files
+circuits/ptau/
+
+# Frontend large assets
+frontend/public/frames/
+frontend/public/*.mp4
+
+# Move contracts build
+contracts/build/
+
+# Deployment state
+deployed.json
+
+# Misc
+.DS_Store
+*.pem
+.vscode/
+.idea/
