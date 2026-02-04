@@ -1,0 +1,20 @@
+version: "3.8"
+
+services:
+  zebra-matcher:
+    build: .
+    ports:
+      - "3001:3001"
+    environment:
+      - TEE_MODE=enclave
+      - ENCLAVE_KEY_PATH=/app/ecdsa.sec
+      - SUI_RPC_URL=https://fullnode.testnet.sui.io:443
+      - SUI_PRIVATE_KEY=${SUI_PRIVATE_KEY}
+      - DARK_POOL_PACKAGE=${DARK_POOL_PACKAGE}
+      - DARK_POOL_OBJECT=${DARK_POOL_OBJECT}
+      - MATCHER_CAP_ID=${MATCHER_CAP_ID}
+      - SEAL_ALLOWLIST_ID=${SEAL_ALLOWLIST_ID}
+      - PORT=3001
+    volumes:
+      - ./ecdsa.sec:/app/ecdsa.sec:ro
+    restart: unless-stopped
