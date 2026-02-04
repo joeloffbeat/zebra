@@ -1,0 +1,21 @@
+{
+  "name": "zebra-scripts",
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "deploy": "tsx deploy.ts",
+    "test": "tsx test-flow.ts",
+    "test:full": "tsx test-full-flow.ts",
+    "setup:seal": "tsx setup-seal.ts"
+  },
+  "dependencies": {
+    "@mysten/sui": "^2.1.0",
+    "dotenv": "^16.4.0",
+    "snarkjs": "^0.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.0"
+  }
+}
