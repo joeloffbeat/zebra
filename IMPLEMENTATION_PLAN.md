@@ -670,3 +670,676 @@ frontend/src/
 **File:** `frontend/src/lib/sui/client.ts`
 
 ```typescript
+import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
+import { Transaction } from '@mysten/sui/transactions';
+
+export const NETWORK = 'testnet';
+
+export const suiClient = new SuiClient({
+  url: getFullnodeUrl(NETWORK),
+});
+
+// Contract addresses (to be updated after deployment)
+export const CONTRACTS = {
+  DARK_POOL_PACKAGE: '0x...', // Update after deployment
+  DARK_POOL_OBJECT: '0x...',  // Shared object ID
+};
+
+export { Transaction };
+```
+
+### 4.3 Proof Generation
+
+**File:** `frontend/src/lib/zk/prover.ts`
+
+```typescript
+import * as snarkjs from 'snarkjs';
+
+interface OrderInput {
+  secret: bigint;
+  side: number; // 0 = sell, 1 = buy
+  amount: bigint;
+  price: bigint;
+  expiry: bigint;
+  nonce: bigint;
+  userBalance: bigint;
+  currentTime: bigint;
+  poolId: bigint;
+}
+
+interface ProofResult {
+  proof: {
+    pi_a: string[];
+    pi_b: string[][];
+    pi_c: string[];
+  };
+  publicSignals: string[];
+  commitment: string;
+  nullifier: string;
+}
+
+// Load circuit WASM and zkey (cached)
+let circuitWasm: ArrayBuffer | null = null;
+let circuitZkey: ArrayBuffer | null = null;
+
+async function loadCircuit() {
+  if (!circuitWasm || !circuitZkey) {
+    const [wasmResponse, zkeyResponse] = await Promise.all([
+      fetch('/circuits/order_commitment.wasm'),
+      fetch('/circuits/order_commitment_0000.zkey'),
+    ]);
+    circuitWasm = await wasmResponse.arrayBuffer();
+    circuitZkey = await zkeyResponse.arrayBuffer();
+  }
+  return { wasm: circuitWasm, zkey: circuitZkey };
+}
+
+export async function generateOrderProof(input: OrderInput): Promise<ProofResult> {
+  const { wasm, zkey } = await loadCircuit();
+
+  // Prepare circuit inputs
+  const circuitInput = {
+    secret: input.secret.toString(),
+    side: input.side.toString(),
+    amount: input.amount.toString(),
+    price: input.price.toString(),
+    expiry: input.expiry.toString(),
+    nonce: input.nonce.toString(),
+    user_balance: input.userBalance.toString(),
+    current_time: input.currentTime.toString(),
+    pool_id: input.poolId.toString(),
+  };
+
+  // Generate proof
+  const { proof, publicSignals } = await snarkjs.groth16.fullProve(
+    circuitInput,
+    new Uint8Array(wasm),
+    new Uint8Array(zkey)
+  );
+
+  // Extract commitment and nullifier from public signals
+  // Based on circuit output order
+  const commitment = publicSignals[0];
+  const nullifier = publicSignals[1];
+
+  return {
+    proof,
+    publicSignals,
+    commitment,
+    nullifier,
+  };
+}
+
+// Convert proof to Sui-compatible format
+export function proofToSuiFormat(proof: ProofResult['proof']): Uint8Array {
+  // Concatenate proof points in the format expected by Sui's groth16 module
+  const points: bigint[] = [];
+
+  // pi_a (G1 point)
+  points.push(BigInt(proof.pi_a[0]));
+  points.push(BigInt(proof.pi_a[1]));
+
+  // pi_b (G2 point - note coordinate swap)
+  points.push(BigInt(proof.pi_b[0][1]));
+  points.push(BigInt(proof.pi_b[0][0]));
+  points.push(BigInt(proof.pi_b[1][1]));
+  points.push(BigInt(proof.pi_b[1][0]));
+
+  // pi_c (G1 point)
+  points.push(BigInt(proof.pi_c[0]));
+  points.push(BigInt(proof.pi_c[1]));
+
+  // Serialize to bytes (32 bytes per field element)
+  const bytes = new Uint8Array(points.length * 32);
+  points.forEach((point, i) => {
+    const hex = point.toString(16).padStart(64, '0');
+    for (let j = 0; j < 32; j++) {
+      bytes[i * 32 + j] = parseInt(hex.slice(j * 2, j * 2 + 2), 16);
+    }
+  });
+
+  return bytes;
+}
+
+// Convert public signals to Sui format
+export function publicSignalsToSuiFormat(signals: string[]): Uint8Array {
+  const bytes = new Uint8Array(signals.length * 32);
+  signals.forEach((signal, i) => {
+    const bigint = BigInt(signal);
+    const hex = bigint.toString(16).padStart(64, '0');
+    for (let j = 0; j < 32; j++) {
+      bytes[i * 32 + j] = parseInt(hex.slice(j * 2, j * 2 + 2), 16);
+    }
+  });
+  return bytes;
+}
+```
+
+### 4.4 Dark Pool Contract Interactions
+
+**File:** `frontend/src/lib/sui/dark-pool.ts`
+
+```typescript
+import { Transaction } from '@mysten/sui/transactions';
+import { suiClient, CONTRACTS } from './client';
+import { generateOrderProof, proofToSuiFormat, publicSignalsToSuiFormat } from '../zk/prover';
+
+interface SubmitOrderParams {
+  side: 'buy' | 'sell';
+  amount: bigint;
+  price: bigint;
+  expiry: bigint;
+  coinObjectId: string; // The coin to lock
+}
+
+export async function submitHiddenOrder(
+  params: SubmitOrderParams,
+  signer: any // Wallet signer
+) {
+  // 1. Generate random secret and nonce
+  const secret = BigInt('0x' + crypto.getRandomValues(new Uint8Array(31)).reduce(
+    (s, b) => s + b.toString(16).padStart(2, '0'), ''
+  ));
+  const nonce = BigInt(Date.now());
+
+  // 2. Get current time and user balance
+  const currentTime = BigInt(Math.floor(Date.now() / 1000));
+  const poolId = BigInt(CONTRACTS.DARK_POOL_OBJECT.slice(2)); // Convert address to bigint
+
+  // 3. Generate ZK proof
+  const proofResult = await generateOrderProof({
+    secret,
+    side: params.side === 'buy' ? 1 : 0,
+    amount: params.amount,
+    price: params.price,
+    expiry: params.expiry,
+    nonce,
+    userBalance: params.amount, // Simplified - should query actual balance
+    currentTime,
+    poolId,
+  });
+
+  // 4. Convert proof to Sui format
+  const proofBytes = proofToSuiFormat(proofResult.proof);
+  const publicInputBytes = publicSignalsToSuiFormat(proofResult.publicSignals);
+  const commitmentBytes = hexToBytes(proofResult.commitment);
+  const nullifierBytes = hexToBytes(proofResult.nullifier);
+
+  // 5. Build transaction
+  const tx = new Transaction();
+
+  if (params.side === 'buy') {
+    tx.moveCall({
+      target: `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_buy_order`,
+      arguments: [
+        tx.object(CONTRACTS.DARK_POOL_OBJECT),
+        tx.object(params.coinObjectId),
+        tx.pure(Array.from(proofBytes)),
+        tx.pure(Array.from(publicInputBytes)),
+        tx.pure(Array.from(commitmentBytes)),
+        tx.pure(Array.from(nullifierBytes)),
+        tx.pure(params.expiry),
+      ],
+      typeArguments: [
+        '0x2::sui::SUI', // Base asset
+        '0x...::usdc::USDC', // Quote asset - update with actual USDC type
+      ],
+    });
+  } else {
+    tx.moveCall({
+      target: `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_sell_order`,
+      arguments: [
+        tx.object(CONTRACTS.DARK_POOL_OBJECT),
+        tx.object(params.coinObjectId),
+        tx.pure(Array.from(proofBytes)),
+        tx.pure(Array.from(publicInputBytes)),
+        tx.pure(Array.from(commitmentBytes)),
+        tx.pure(Array.from(nullifierBytes)),
+        tx.pure(params.expiry),
+      ],
+      typeArguments: [
+        '0x2::sui::SUI',
+        '0x...::usdc::USDC',
+      ],
+    });
+  }
+
+  // 6. Sign and execute
+  const result = await signer.signAndExecuteTransaction({
+    transaction: tx,
+  });
+
+  // 7. Return order details (store locally for later reveal)
+  return {
+    digest: result.digest,
+    commitment: proofResult.commitment,
+    nullifier: proofResult.nullifier,
+    secret: secret.toString(),
+    nonce: nonce.toString(),
+    side: params.side,
+    amount: params.amount.toString(),
+    price: params.price.toString(),
+    expiry: params.expiry.toString(),
+  };
+}
+
+function hexToBytes(hex: string): Uint8Array {
+  const cleanHex = hex.startsWith('0x') ? hex.slice(2) : hex;
+  const bytes = new Uint8Array(cleanHex.length / 2);
+  for (let i = 0; i < bytes.length; i++) {
+    bytes[i] = parseInt(cleanHex.slice(i * 2, i * 2 + 2), 16);
+  }
+  return bytes;
+}
+```
+
+### 4.5 Wallet Store (Zustand)
+
+**File:** `frontend/src/lib/stores/wallet-store.ts`
+
+```typescript
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+interface WalletState {
+  address: string | null;
+  isConnected: boolean;
+  balance: {
+    sui: string;
+    usdc: string;
+  };
+
+  // Actions
+  setAddress: (address: string | null) => void;
+  setConnected: (connected: boolean) => void;
+  setBalance: (balance: { sui: string; usdc: string }) => void;
+  disconnect: () => void;
+}
+
+export const useWalletStore = create<WalletState>()(
+  persist(
+    (set) => ({
+      address: null,
+      isConnected: false,
+      balance: { sui: '0', usdc: '0' },
+
+      setAddress: (address) => set({ address }),
+      setConnected: (isConnected) => set({ isConnected }),
+      setBalance: (balance) => set({ balance }),
+      disconnect: () => set({ address: null, isConnected: false, balance: { sui: '0', usdc: '0' } }),
+    }),
+    {
+      name: 'zebra-wallet',
+    }
+  )
+);
+```
+
+### 4.6 Order Store (Zustand)
+
+**File:** `frontend/src/lib/stores/order-store.ts`
+
+```typescript
+import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+interface HiddenOrder {
+  id: string;
+  commitment: string;
+  nullifier: string;
+  secret: string;
+  nonce: string;
+  side: 'buy' | 'sell';
+  amount: string;
+  price: string;
+  expiry: string;
+  status: 'pending' | 'matched' | 'settled' | 'cancelled' | 'expired';
+  createdAt: number;
+  txDigest: string;
+}
+
+interface OrderState {
+  orders: HiddenOrder[];
+
+  // Actions
+  addOrder: (order: HiddenOrder) => void;
+  updateOrderStatus: (commitment: string, status: HiddenOrder['status']) => void;
+  removeOrder: (commitment: string) => void;
+  getOrderByCommitment: (commitment: string) => HiddenOrder | undefined;
+}
+
+export const useOrderStore = create<OrderState>()(
+  persist(
+    (set, get) => ({
+      orders: [],
+
+      addOrder: (order) => set((state) => ({
+        orders: [...state.orders, order],
+      })),
+
+      updateOrderStatus: (commitment, status) => set((state) => ({
+        orders: state.orders.map((o) =>
+          o.commitment === commitment ? { ...o, status } : o
+        ),
+      })),
+
+      removeOrder: (commitment) => set((state) => ({
+        orders: state.orders.filter((o) => o.commitment !== commitment),
+      })),
+
+      getOrderByCommitment: (commitment) =>
+        get().orders.find((o) => o.commitment === commitment),
+    }),
+    {
+      name: 'zebra-orders',
+    }
+  )
+);
+```
+
+---
+
+## Phase 5: Backend Matching Engine
+
+### 5.1 Matching Engine Architecture
+
+```
+backend/
+├── src/
+│   ├── index.ts           # Entry point
+│   ├── sui-listener.ts    # Listen to on-chain events
+│   ├── order-book.ts      # In-memory order book
+│   ├── matcher.ts         # Matching logic
+│   └── settlement.ts      # Trigger settlements
+├── package.json
+└── tsconfig.json
+```
+
+### 5.2 Event Listener
+
+**File:** `backend/src/sui-listener.ts`
+
+```typescript
+import { SuiClient, SuiEventFilter } from '@mysten/sui/client';
+import { EventEmitter } from 'events';
+
+const DARK_POOL_PACKAGE = '0x...'; // Update after deployment
+
+export class SuiEventListener extends EventEmitter {
+  private client: SuiClient;
+  private unsubscribe: (() => void) | null = null;
+
+  constructor(rpcUrl: string) {
+    super();
+    this.client = new SuiClient({ url: rpcUrl });
+  }
+
+  async start() {
+    const filter: SuiEventFilter = {
+      MoveEventType: `${DARK_POOL_PACKAGE}::dark_pool::OrderCommitted`,
+    };
+
+    this.unsubscribe = await this.client.subscribeEvent({
+      filter,
+      onMessage: (event) => {
+        this.emit('orderCommitted', {
+          commitment: event.parsedJson?.commitment,
+          nullifier: event.parsedJson?.nullifier,
+          owner: event.parsedJson?.owner,
+          isBid: event.parsedJson?.is_bid,
+          lockedAmount: event.parsedJson?.locked_amount,
+          timestamp: event.parsedJson?.timestamp,
+        });
+      },
+    });
+
+    console.log('Listening for OrderCommitted events...');
+  }
+
+  stop() {
+    if (this.unsubscribe) {
+      this.unsubscribe();
+      this.unsubscribe = null;
+    }
+  }
+}
+```
+
+### 5.3 Order Book & Matcher
+
+**File:** `backend/src/matcher.ts`
+
+```typescript
+interface CommittedOrder {
+  commitment: string;
+  owner: string;
+  isBid: boolean;
+  lockedAmount: bigint;
+  timestamp: number;
+  // Encrypted order details (optional - provided by user)
+  encryptedPrice?: string;
+  encryptedAmount?: string;
+}
+
+export class OrderMatcher {
+  private bids: Map<string, CommittedOrder> = new Map();
+  private asks: Map<string, CommittedOrder> = new Map();
+
+  addOrder(order: CommittedOrder) {
+    if (order.isBid) {
+      this.bids.set(order.commitment, order);
+    } else {
+      this.asks.set(order.commitment, order);
+    }
+
+    // Try to find matches
+    this.findMatches();
+  }
+
+  removeOrder(commitment: string) {
+    this.bids.delete(commitment);
+    this.asks.delete(commitment);
+  }
+
+  findMatches(): Array<{ buyer: CommittedOrder; seller: CommittedOrder }> {
+    const matches: Array<{ buyer: CommittedOrder; seller: CommittedOrder }> = [];
+
+    // Simple matching: pair orders with similar locked amounts
+    // In production, would use encrypted price hints
+    for (const [buyCommitment, buyer] of this.bids) {
+      for (const [sellCommitment, seller] of this.asks) {
+        // Match if locked amounts are within 10% of each other
+        // This is a simplified heuristic
+        const ratio = Number(buyer.lockedAmount) / Number(seller.lockedAmount);
+        if (ratio >= 0.9 && ratio <= 1.1) {
+          matches.push({ buyer, seller });
+
+          // Remove matched orders
+          this.bids.delete(buyCommitment);
+          this.asks.delete(sellCommitment);
+          break;
+        }
+      }
+    }
+
+    return matches;
+  }
+}
+```
+
+---
+
+## Phase 6: Deployment & Testing
+
+### 6.1 Deploy Move Contracts
+
+```bash
+# 1. Build contracts
+cd contracts
+sui move build
+
+# 2. Deploy to testnet
+sui client publish --gas-budget 100000000
+
+# 3. Note the package ID and create pool
+sui client call \
+  --package <PACKAGE_ID> \
+  --module dark_pool \
+  --function create_pool \
+  --type-args 0x2::sui::SUI <USDC_TYPE> \
+  --args <VK_BYTES> <POOL_ID> 1000000 1000000000000 100 \
+  --gas-budget 50000000
+```
+
+### 6.2 Test Script
+
+**File:** `scripts/test-flow.ts`
+
+```typescript
+import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
+import { SuiClient } from '@mysten/sui/client';
+import { submitHiddenOrder } from '../frontend/src/lib/sui/dark-pool';
+
+async function testFullFlow() {
+  console.log('=== Zebra Dark Pool Test ===\n');
+
+  // 1. Setup
+  const client = new SuiClient({ url: 'https://fullnode.testnet.sui.io:443' });
+  const keypair = Ed25519Keypair.deriveKeypair(process.env.MNEMONIC!);
+  const address = keypair.toSuiAddress();
+  console.log('Test address:', address);
+
+  // 2. Get SUI coins
+  const coins = await client.getCoins({ owner: address });
+  console.log('Available coins:', coins.data.length);
+
+  // 3. Submit a BUY order
+  console.log('\n--- Submitting BUY order ---');
+  const buyOrder = await submitHiddenOrder({
+    side: 'buy',
+    amount: BigInt(1000000000), // 1 SUI
+    price: BigInt(100), // $1.00
+    expiry: BigInt(Math.floor(Date.now() / 1000) + 3600), // 1 hour
+    coinObjectId: coins.data[0].coinObjectId,
+  }, keypair);
+  console.log('BUY order submitted:', buyOrder.commitment);
+
+  // 4. Submit a SELL order (different keypair)
+  console.log('\n--- Submitting SELL order ---');
+  // ... similar for sell order
+
+  // 5. Check events
+  console.log('\n--- Checking events ---');
+  // ... query events
+
+  console.log('\n=== Test Complete ===');
+}
+
+testFullFlow().catch(console.error);
+```
+
+---
+
+## Phase 7: Implementation Order
+
+### Step-by-Step Execution
+
+| Step | Task | Files | Est. Complexity |
+|------|------|-------|-----------------|
+| 1 | Create project structure | Directories only | Low |
+| 2 | Build ZK circuit | `circuits/order_commitment.circom` | Medium |
+| 3 | Compile circuit & export keys | `circuits/scripts/*.js` | Medium |
+| 4 | Write Move contracts | `contracts/sources/*.move` | High |
+| 5 | Deploy to testnet | CLI commands | Medium |
+| 6 | Add frontend dependencies | `package.json` | Low |
+| 7 | Implement proof generation | `lib/zk/prover.ts` | High |
+| 8 | Implement Sui client | `lib/sui/*.ts` | Medium |
+| 9 | Create Zustand stores | `lib/stores/*.ts` | Low |
+| 10 | Wire up wallet modal | Modify existing modal | Medium |
+| 11 | Wire up order submission | Modify trade page | High |
+| 12 | Build matching engine | `backend/src/*.ts` | Medium |
+| 13 | End-to-end testing | `scripts/test-flow.ts` | Medium |
+
+---
+
+## Key Technical Decisions
+
+### 1. Curve Selection: BN254
+- Sui's groth16 module supports both BN254 and BLS12-381
+- BN254 chosen for smaller proof size and faster verification
+- Compatible with snarkjs/Circom ecosystem
+
+### 2. Proof Format Conversion
+- snarkjs outputs JSON proof format
+- Need to convert to Arkworks canonical serialization for Sui
+- pi_b coordinates need swapping (different representation)
+
+### 3. Commitment Hash Function
+- Circuit uses Poseidon (ZK-friendly)
+- On-chain verification uses same hash
+- Off-chain reveal verification uses blake2b256 for simplicity
+
+### 4. Order Matching Strategy
+- Off-chain matching engine monitors events
+- Users can optionally encrypt order details to matcher
+- Matches trigger reveal phase on-chain
+
+---
+
+## Dependencies Summary
+
+### Frontend
+```json
+{
+  "@mysten/sui": "^2.1.0",
+  "@mysten/dapp-kit": "^1.0.1",
+  "snarkjs": "^0.7.0",
+  "circomlibjs": "^0.1.7",
+  "zustand": "^4.5.0"
+}
+```
+
+### Circuits
+```json
+{
+  "circomlib": "^2.0.5",
+  "snarkjs": "^0.7.0"
+}
+```
+
+### Backend
+```json
+{
+  "@mysten/sui": "^2.1.0",
+  "express": "^4.18.0"
+}
+```
+
+---
+
+## Success Criteria
+
+1. **Circuit compiles** without errors
+2. **Proof generation** works in browser (<3s)
+3. **Move contracts deploy** to testnet
+4. **On-chain verification** passes for valid proofs
+5. **Order submission** locks funds correctly
+6. **Matching engine** finds price crosses
+7. **Settlement** transfers funds atomically
+8. **Full flow test** passes end-to-end
+
+---
+
+## Reference Code Mapping
+
+| Zebra Component | Reference File |
+|----------------|----------------|
+| Sui Client | `playground-sui/lib/sui/client.ts` |
+| DeepBook | `playground-sui/lib/sui/deepbook-v3.ts` |
+| Balance Manager | `playground-sui/lib/sui/balance-manager.ts` |
+| Trading | `playground-sui/lib/sui/trading.ts` |
+| Nullifier Circuit | `zk/01-circom/circuits/nullifier.circom` |
+| Private Transfer | `zk/01-circom/circuits/private_transfer.circom` |
+| Merkle Tree | `zk/01-circom/scripts/compute_merkle_tree.js` |
+| Proof Conversion | `zk/deployments/avalanche/scripts/convertProofs.js` |
+| Verification Key | `zk/01-circom/build/nullifier_vkey.json` |
