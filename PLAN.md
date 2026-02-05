@@ -253,3 +253,4 @@ frontend/
 2. **Hero treatment** — Keep the big "STRIPES HIDE" text or go fully minimal?
 3. **Color accents** — Stay pure black/white or allow subtle gray tones?
 4. **Borders** — 1px everywhere or 2px for emphasis areas?
+
