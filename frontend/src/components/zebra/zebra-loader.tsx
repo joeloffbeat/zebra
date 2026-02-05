@@ -65,3 +65,4 @@ export function ZebraLoaderDots({ className }: { className?: string }) {
     </div>
   );
 }
+
