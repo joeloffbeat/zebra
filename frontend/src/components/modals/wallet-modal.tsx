@@ -57,3 +57,4 @@ export function WalletModal({ open, onOpenChange, onConnect }: WalletModalProps)
     </Dialog>
   );
 }
+
