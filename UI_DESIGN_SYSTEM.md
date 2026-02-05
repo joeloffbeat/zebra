@@ -319,3 +319,325 @@ export function OrderForm({ pair, balance, onSubmit }: OrderFormProps) {
 ### 3. Herd Statistics
 
 ```tsx
+interface HerdStatsProps {
+  pair: string;
+  totalOrders: number;
+  volume24h: string;
+  estimatedSpread: string;
+}
+
+export function HerdStats({ pair, totalOrders, volume24h, estimatedSpread }: HerdStatsProps) {
+  return (
+    <div className="bg-card rounded-lg border border-border p-6">
+      <div className="flex items-center gap-2 mb-4">
+        <ZebraIcon className="w-5 h-5" />
+        <h3 className="text-h3">The Herd</h3>
+      </div>
+
+      <div className="grid grid-cols-3 gap-4">
+        <div>
+          <div className="text-caption text-muted mb-1">Hidden Orders</div>
+          <div className="text-h2 font-mono">{totalOrders}</div>
+        </div>
+        <div>
+          <div className="text-caption text-muted mb-1">24h Volume</div>
+          <div className="text-h2 font-mono">{volume24h}</div>
+        </div>
+        <div>
+          <div className="text-caption text-muted mb-1">Est. Spread</div>
+          <div className="text-h2 font-mono">{estimatedSpread}</div>
+        </div>
+      </div>
+
+      <div className="mt-4 pt-4 border-t border-border">
+        <div className="flex items-center gap-2 text-small text-muted">
+          <LockIcon className="w-3 h-3" />
+          <span>Individual order details are hidden. Only aggregate stats shown.</span>
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### 4. Proof Generation Progress
+
+```tsx
+interface ProofProgressProps {
+  stage: 'preparing' | 'computing' | 'verifying' | 'complete';
+  progress: number;
+}
+
+export function ProofProgress({ stage, progress }: ProofProgressProps) {
+  const stages = [
+    { key: 'preparing', label: 'Preparing witness' },
+    { key: 'computing', label: 'Computing proof' },
+    { key: 'verifying', label: 'Verifying on-chain' },
+    { key: 'complete', label: 'Complete' },
+  ];
+
+  return (
+    <div className="bg-card rounded-lg border border-border p-6">
+      <h3 className="text-h3 mb-4">Generating ZK Proof</h3>
+
+      <div className="space-y-4">
+        {stages.map((s, i) => {
+          const isActive = s.key === stage;
+          const isComplete = stages.findIndex(x => x.key === stage) > i;
+
+          return (
+            <div key={s.key} className="flex items-center gap-3">
+              <div className={cn(
+                'w-6 h-6 rounded-full flex items-center justify-center',
+                isComplete ? 'bg-success' : isActive ? 'bg-accent' : 'bg-border'
+              )}>
+                {isComplete ? (
+                  <CheckIcon className="w-4 h-4 text-white" />
+                ) : isActive ? (
+                  <Spinner className="w-4 h-4 text-white" />
+                ) : (
+                  <span className="text-caption text-muted">{i + 1}</span>
+                )}
+              </div>
+              <span className={cn(
+                'text-small',
+                isActive ? 'text-primary' : isComplete ? 'text-success' : 'text-muted'
+              )}>
+                {s.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Progress Bar */}
+      <div className="mt-6">
+        <div className="h-2 bg-border rounded-full overflow-hidden">
+          <div
+            className="h-full bg-accent transition-all duration-300"
+            style={{ width: `${progress}%` }}
+          />
+        </div>
+        <div className="mt-2 text-caption text-muted text-right">
+          {progress}%
+        </div>
+      </div>
+    </div>
+  );
+}
+```
+
+### 5. Cross-Chain Deposit (LI.FI)
+
+```tsx
+interface DepositFormProps {
+  suiAddress: string;
+  onDeposit: (params: DepositParams) => Promise<void>;
+}
+
+export function DepositForm({ suiAddress, onDeposit }: DepositFormProps) {
+  const [fromChain, setFromChain] = useState('ethereum');
+  const [fromToken, setFromToken] = useState('ETH');
+  const [amount, setAmount] = useState('');
+  const [quote, setQuote] = useState<Quote | null>(null);
+
+  return (
+    <div className="bg-card rounded-lg border border-border p-6">
+      <h3 className="text-h3 mb-4">Deposit to Trade</h3>
+      <p className="text-small text-secondary mb-6">
+        Deposit from any chain, trade on Sui
+      </p>
+
+      {/* From Chain */}
+      <div className="mb-4">
+        <label className="text-small text-secondary mb-2 block">From</label>
+        <ChainSelector
+          value={fromChain}
+          onChange={setFromChain}
+          chains={['ethereum', 'arbitrum', 'base', 'polygon', 'optimism']}
+        />
+      </div>
+
+      {/* Token & Amount */}
+      <div className="mb-4">
+        <label className="text-small text-secondary mb-2 block">Token & Amount</label>
+        <div className="flex gap-2">
+          <TokenSelector
+            chain={fromChain}
+            value={fromToken}
+            onChange={setFromToken}
+          />
+          <input
+            type="text"
+            value={amount}
+            onChange={(e) => setAmount(e.target.value)}
+            placeholder="0.00"
+            className="flex-1 bg-background border border-border rounded-lg px-4 py-3 font-mono"
+          />
+        </div>
+      </div>
+
+      {/* To (Fixed: Sui) */}
+      <div className="mb-4">
+        <label className="text-small text-secondary mb-2 block">To</label>
+        <div className="bg-background border border-border rounded-lg px-4 py-3 flex items-center gap-2">
+          <SuiLogo className="w-5 h-5" />
+          <span>Sui</span>
+          <span className="text-secondary">• USDC</span>
+        </div>
+      </div>
+
+      {/* Quote */}
+      {quote && (
+        <div className="bg-background rounded-lg p-4 mb-4 space-y-2">
+          <div className="flex justify-between text-small">
+            <span className="text-secondary">You'll Receive</span>
+            <span className="font-mono text-success">~{quote.toAmount} USDC</span>
+          </div>
+          <div className="flex justify-between text-small">
+            <span className="text-secondary">Route</span>
+            <span className="text-muted">{quote.route}</span>
+          </div>
+          <div className="flex justify-between text-small">
+            <span className="text-secondary">Est. Time</span>
+            <span className="text-muted">~{quote.estimatedTime}</span>
+          </div>
+        </div>
+      )}
+
+      {/* LI.FI Badge */}
+      <div className="flex items-center gap-2 mb-4 text-caption text-muted">
+        <span>Powered by</span>
+        <LiFiLogo className="h-4" />
+      </div>
+
+      <button className="w-full py-4 rounded-lg bg-sui-blue hover:bg-sui-blue/90 text-white font-medium">
+        Deposit to Sui
+      </button>
+    </div>
+  );
+}
+```
+
+---
+
+## Page Layouts
+
+### Markets Dashboard
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  HEADER: Logo | Markets | My Orders | Deposit | Connect Wallet  │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │  HERO: "Trade Without Revealing Your Hand"                  ││
+│  │  Sui-native ZK dark pool with on-chain proof verification   ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+│  AVAILABLE MARKETS                                               │
+│  ────────────────────────────────────────────────────────────── │
+│                                                                  │
+│  ┌──────────────────┐ ┌──────────────────┐ ┌──────────────────┐ │
+│  │ SUI/USDC         │ │ USDC/USDT        │ │ WETH/USDC        │ │
+│  │ Mark: $1.23      │ │ Mark: $1.00      │ │ Mark: $3,456     │ │
+│  │ Hidden: 47       │ │ Hidden: 23       │ │ Hidden: 89       │ │
+│  │ Vol: $1.2M       │ │ Vol: $890K       │ │ Vol: $2.4M       │ │
+│  │ [TRADE]          │ │ [TRADE]          │ │ [TRADE]          │ │
+│  └──────────────────┘ └──────────────────┘ └──────────────────┘ │
+│                                                                  │
+│  ┌─────────────────────────────────────────────────────────────┐│
+│  │ YOUR HIDDEN ORDERS (3 active)                               ││
+│  │ ─────────────────────────────────────────────────────────── ││
+│  │ [Hidden Order Card] [Hidden Order Card] [Hidden Order Card] ││
+│  └─────────────────────────────────────────────────────────────┘│
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Trading Interface
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│  HEADER                                                          │
+├─────────────────────────────────────────────────────────────────┤
+│  SUI/USDC    $1.23 (+2.4%)    │ Markets ▼                       │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                  │
+│  ┌───────────────────────┐ ┌─────────────────────────────────┐  │
+│  │ HERD STATISTICS       │ │ ORDER FORM                      │  │
+│  │ ───────────────────── │ │ ───────────────────────────────│  │
+│  │                       │ │                                 │  │
+│  │ Hidden Orders: 47     │ │ [BUY]  [SELL]                   │  │
+│  │ 24h Volume: $1.2M     │ │                                 │  │
+│  │ Est. Spread: 0.1%     │ │ Amount: [________] SUI          │  │
+│  │                       │ │ Price:  [________] USDC         │  │
+│  │ 🔒 Individual orders  │ │                                 │  │
+│  │    are hidden         │ │ Order Value: $1,230             │  │
+│  │                       │ │                                 │  │
+│  └───────────────────────┘ │ 🔒 ZK proof verified on-chain   │  │
+│                            │                                 │  │
+│  ┌───────────────────────┐ │ [HIDE ORDER IN THE HERD]        │  │
+│  │ PRICE CHART           │ │                                 │  │
+│  │ ───────────────────── │ └─────────────────────────────────┘  │
+│  │                       │                                      │
+│  │    ╭──────╮           │ ┌─────────────────────────────────┐  │
+│  │   ╭╯      ╰──╮        │ │ YOUR ORDERS                     │  │
+│  │  ╭╯          ╰─╮      │ │ ───────────────────────────────│  │
+│  │ ─╯             ╰──    │ │                                 │  │
+│  │                       │ │ [Hidden Order Card]             │  │
+│  │ 1H  4H  1D  1W        │ │ [Hidden Order Card]             │  │
+│  └───────────────────────┘ └─────────────────────────────────┘  │
+│                                                                  │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## Animations
+
+### Proof Generation
+
+```css
+@keyframes pulse-glow {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(139, 92, 246, 0.4); }
+  50% { box-shadow: 0 0 20px 10px rgba(139, 92, 246, 0.2); }
+}
+
+.generating-proof {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+```
+
+### Order Hidden Confirmation
+
+```css
+@keyframes fade-to-hidden {
+  0% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1); background: var(--hidden-muted); }
+}
+
+.order-hidden {
+  animation: fade-to-hidden 0.5s ease-out forwards;
+}
+```
+
+---
+
+## Icons
+
+Use Lucide icons with these semantic mappings:
+
+| Concept | Icon |
+|---------|------|
+| Hidden/Private | `Lock`, `EyeOff`, `Shield` |
+| Revealed | `Unlock`, `Eye` |
+| ZK Proof | `ShieldCheck`, `Fingerprint` |
+| Order | `ArrowUpDown`, `TrendingUp`, `TrendingDown` |
+| Success | `Check`, `CheckCircle` |
+| Warning | `AlertTriangle` |
+| Error | `XCircle` |
+| Loading | `Loader2` (animated) |
+| Sui | Custom Sui logo |
+| LI.FI | Custom LI.FI logo |
