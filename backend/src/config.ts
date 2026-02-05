@@ -21,3 +21,4 @@ export const config = {
   teeMode: process.env.TEE_MODE || 'local-dev',
   enclaveKeyPath: process.env.ENCLAVE_KEY_PATH || '/app/ecdsa.sec',
 };
+
