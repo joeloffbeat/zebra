@@ -1,10 +1,10 @@
 /**
- * Comprehensive E2E Test with TEE Verification
+ * Comprehensive E2E Test with TEE Verification (Privacy Rewrite)
  *
  * 10-phase test that validates the entire Zebra dark pool flow:
  *  1. Check backend health + TEE mode + public key
- *  2. Submit BUY order on-chain with ZK proof
- *  3. Submit SELL order on-chain with ZK proof
+ *  2. Submit BUY order on-chain with ZK proof + Seal encryption
+ *  3. Submit SELL order on-chain with ZK proof + Seal encryption
  *  4. Poll backend until match + settlement confirmed
  *  5. Fetch TEE attestation, verify secp256k1 signature
  *  6. Submit 3 more orders (2 buys + 1 sell) for multi-order matching
@@ -19,6 +19,7 @@ import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import { bcs } from '@mysten/sui/bcs';
+import { SealClient } from '@mysten/seal';
 import * as snarkjs from 'snarkjs';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -33,13 +34,21 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const NETWORK = 'testnet';
-const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK) });
+const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), network: 'testnet' });
 
 const PACKAGE_ID = process.env.DARK_POOL_PACKAGE!;
 const POOL_OBJECT_ID = process.env.DARK_POOL_OBJECT!;
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
+const SEAL_ALLOWLIST_ID = process.env.SEAL_ALLOWLIST_ID || '';
+const SEAL_PACKAGE_ID = process.env.SEAL_PACKAGE_ID || '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
 
-const TYPE_ARGS: [string, string] = ['0x2::sui::SUI', '0x2::sui::SUI'];
+const TYPE_ARGS: [string] = ['0x2::sui::SUI'];
+
+// Real testnet key server IDs
+const TESTNET_KEY_SERVERS = [
+  '0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75',
+  '0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8',
+];
 
 // BN254 base field prime
 const P = 21888242871839275222246405745257275088696311157297823662689037894645226208583n;
@@ -58,7 +67,46 @@ function assert(condition: boolean, message: string) {
   }
 }
 
-// ── ZK Proof Helpers (reused from test-match-settle.ts) ──────────────
+// ── Seal Encryption ───────────────────────────────────────────────────
+
+let sealClient: SealClient | null = null;
+
+function getSealClient(): SealClient {
+  if (!sealClient) {
+    sealClient = new SealClient({
+      suiClient: client,
+      serverConfigs: TESTNET_KEY_SERVERS.map(id => ({ objectId: id, weight: 1 })),
+      verifyKeyServers: false,
+    });
+  }
+  return sealClient;
+}
+
+async function encryptOrderData(side: number, price: bigint, amount: bigint): Promise<Uint8Array> {
+  if (!SEAL_ALLOWLIST_ID) {
+    // If no Seal configured, return empty (test will fail at matching phase)
+    return new Uint8Array(0);
+  }
+
+  const seal = getSealClient();
+  const dataStr = JSON.stringify({
+    side,
+    price: price.toString(),
+    amount: amount.toString(),
+  });
+  const dataBytes = new TextEncoder().encode(dataStr);
+
+  const { encryptedObject } = await seal.encrypt({
+    threshold: 2,
+    packageId: SEAL_PACKAGE_ID,
+    id: SEAL_ALLOWLIST_ID,
+    data: dataBytes,
+  });
+
+  return new Uint8Array(encryptedObject);
+}
+
+// ── ZK Proof Helpers ──────────────────────────────────────────────────
 
 function bigintToLE(val: bigint): Uint8Array {
   const bytes = new Uint8Array(32);
@@ -118,8 +166,10 @@ interface OrderProof {
   publicInputBytes: Uint8Array;
   commitmentBytes: Uint8Array;
   nullifierBytes: Uint8Array;
-  expiry: bigint;
   commitmentHex: string;
+  side: number;
+  amount: bigint;
+  price: bigint;
 }
 
 async function generateOrderProof(side: number, amount: bigint, price: bigint): Promise<OrderProof> {
@@ -160,25 +210,24 @@ async function generateOrderProof(side: number, amount: bigint, price: bigint): 
   const nullifierBytes = bigintToLE(BigInt(publicSignals[1]));
   const commitmentHex = '0x' + Array.from(commitmentBytes).map(b => b.toString(16).padStart(2, '0')).join('');
 
-  return { proofBytes: encodeProof(proof), publicInputBytes: encodePublicInputs(publicSignals), commitmentBytes, nullifierBytes, expiry, commitmentHex };
+  return { proofBytes: encodeProof(proof), publicInputBytes: encodePublicInputs(publicSignals), commitmentBytes, nullifierBytes, commitmentHex, side, amount, price };
 }
 
 async function submitOrder(
   keypair: Ed25519Keypair,
-  side: 'buy' | 'sell',
   orderProof: OrderProof,
   lockAmount: bigint,
 ): Promise<string> {
   const tx = new Transaction();
   tx.setGasBudget(10_000_000);
 
+  // Encrypt order data with Seal
+  const encryptedData = await encryptOrderData(orderProof.side, orderProof.price, orderProof.amount);
+
   const [coin] = tx.splitCoins(tx.gas, [lockAmount]);
-  const target = side === 'buy'
-    ? `${PACKAGE_ID}::dark_pool::submit_buy_order`
-    : `${PACKAGE_ID}::dark_pool::submit_sell_order`;
 
   tx.moveCall({
-    target,
+    target: `${PACKAGE_ID}::dark_pool::submit_order`,
     arguments: [
       tx.object(POOL_OBJECT_ID),
       coin,
@@ -186,8 +235,7 @@ async function submitOrder(
       tx.pure(bcs.vector(bcs.u8()).serialize(Array.from(orderProof.publicInputBytes))),
       tx.pure(bcs.vector(bcs.u8()).serialize(Array.from(orderProof.commitmentBytes))),
       tx.pure(bcs.vector(bcs.u8()).serialize(Array.from(orderProof.nullifierBytes))),
-      tx.pure(bcs.u64().serialize(orderProof.expiry)),
-      tx.pure(bcs.vector(bcs.u8()).serialize([])), // empty encrypted_data
+      tx.pure(bcs.vector(bcs.u8()).serialize(Array.from(encryptedData))),
     ],
     typeArguments: TYPE_ARGS,
   });
@@ -199,7 +247,7 @@ async function submitOrder(
   });
 
   if (result.effects?.status?.status !== 'success') {
-    throw new Error(`${side.toUpperCase()} order submission failed: ${JSON.stringify(result.effects?.status)}`);
+    throw new Error(`Order submission failed: ${JSON.stringify(result.effects?.status)}`);
   }
 
   await client.waitForTransaction({ digest: result.digest });
@@ -218,10 +266,16 @@ async function sleep(ms: number): Promise<void> {
 // ── Main ─────────────────────────────────────────────────────────────
 
 async function main() {
-  console.log('=== Zebra E2E Test with TEE Verification ===\n');
+  console.log('=== Zebra E2E Test with TEE Verification (Privacy Rewrite) ===\n');
   console.log(`Backend: ${BACKEND_URL}`);
   console.log(`Package: ${PACKAGE_ID}`);
-  console.log(`Pool:    ${POOL_OBJECT_ID}\n`);
+  console.log(`Pool:    ${POOL_OBJECT_ID}`);
+  console.log(`Seal:    ${SEAL_ALLOWLIST_ID ? 'configured' : 'NOT CONFIGURED'}\n`);
+
+  if (!SEAL_ALLOWLIST_ID) {
+    console.warn('WARNING: SEAL_ALLOWLIST_ID not set — orders will have empty encrypted data');
+    console.warn('Backend will queue orders for retry, matching will not work.\n');
+  }
 
   const { secretKey } = decodeSuiPrivateKey(process.env.SUI_PRIVATE_KEY!);
   const keypair = Ed25519Keypair.fromSecretKey(secretKey);
@@ -244,20 +298,20 @@ async function main() {
   console.log(`  TEE mode: ${status.tee.mode}`);
   console.log(`  TEE pubkey: ${teePublicKey}\n`);
 
-  // ── Phase 2: Submit BUY order with ZK proof ────────────────────────
+  // ── Phase 2: Submit BUY order with ZK proof + Seal encryption ──────
   console.log('--- Phase 2: Submit BUY Order ---');
   const buyProof = await generateOrderProof(1, ORDER_AMOUNT, ORDER_PRICE);
   console.log(`  Commitment: ${buyProof.commitmentHex.slice(0, 20)}...`);
-  const buyDigest = await submitOrder(keypair, 'buy', buyProof, ORDER_AMOUNT);
+  const buyDigest = await submitOrder(keypair, buyProof, ORDER_AMOUNT);
   console.log(`  BUY tx: ${buyDigest}`);
   assert(!!buyDigest, 'BUY order submitted on-chain');
   console.log();
 
-  // ── Phase 3: Submit SELL order with ZK proof ───────────────────────
+  // ── Phase 3: Submit SELL order with ZK proof + Seal encryption ─────
   console.log('--- Phase 3: Submit SELL Order ---');
   const sellProof = await generateOrderProof(0, ORDER_AMOUNT, ORDER_PRICE);
   console.log(`  Commitment: ${sellProof.commitmentHex.slice(0, 20)}...`);
-  const sellDigest = await submitOrder(keypair, 'sell', sellProof, ORDER_AMOUNT);
+  const sellDigest = await submitOrder(keypair, sellProof, ORDER_AMOUNT);
   console.log(`  SELL tx: ${sellDigest}`);
   assert(!!sellDigest, 'SELL order submitted on-chain');
   console.log();
@@ -289,13 +343,11 @@ async function main() {
 
   if (attResp.recentAttestations?.length > 0) {
     const att = attResp.recentAttestations[attResp.recentAttestations.length - 1];
-    const message = `${att.buyerCommitment}:${att.sellerCommitment}:${att.executionPrice}:${att.executionAmount}:${att.timestamp}`;
+    const message = `${att.commitmentA}:${att.commitmentB}:${att.executionPrice}:${att.executionAmount}:${att.timestamp}`;
     const pubKeyBytes = hexToBytes(att.publicKey);
 
     try {
       const sigBytes = hexToBytes(att.signature);
-      // v2 @noble/curves internally hashes the message, so pass raw message bytes
-      // (backend v1 does: sign(sha256(message)), v2 verify does: verify(sig, msg) → sha256(msg) internally)
       const messageBytes = new TextEncoder().encode(message);
       const valid = secp256k1.verify(sigBytes, messageBytes, pubKeyBytes);
       assert(valid, 'TEE attestation signature is cryptographically valid');
@@ -308,15 +360,15 @@ async function main() {
   // ── Phase 6: Multi-order submission (2 buys + 1 sell) ──────────────
   console.log('--- Phase 6: Multi-Order Submission ---');
   const buy2Proof = await generateOrderProof(1, ORDER_AMOUNT, ORDER_PRICE);
-  const buy2Digest = await submitOrder(keypair, 'buy', buy2Proof, ORDER_AMOUNT);
+  const buy2Digest = await submitOrder(keypair, buy2Proof, ORDER_AMOUNT);
   console.log(`  BUY2 tx: ${buy2Digest}`);
 
   const buy3Proof = await generateOrderProof(1, ORDER_AMOUNT, ORDER_PRICE);
-  const buy3Digest = await submitOrder(keypair, 'buy', buy3Proof, ORDER_AMOUNT);
+  const buy3Digest = await submitOrder(keypair, buy3Proof, ORDER_AMOUNT);
   console.log(`  BUY3 tx: ${buy3Digest}`);
 
   const sell2Proof = await generateOrderProof(0, ORDER_AMOUNT, ORDER_PRICE);
-  const sell2Digest = await submitOrder(keypair, 'sell', sell2Proof, ORDER_AMOUNT);
+  const sell2Digest = await submitOrder(keypair, sell2Proof, ORDER_AMOUNT);
   console.log(`  SELL2 tx: ${sell2Digest}`);
 
   assert(!!buy2Digest && !!buy3Digest && !!sell2Digest, 'Multi-order submission succeeded');
@@ -349,7 +401,6 @@ async function main() {
   console.log(`  Flash loan result: success=${flashResult.success}`);
   if (flashResult.txDigest) console.log(`  Tx: ${flashResult.txDigest}`);
   if (flashResult.error) console.log(`  Error: ${flashResult.error}`);
-  // Flash loan may fail on testnet due to pool liquidity — log but don't hard-fail
   if (flashResult.success) {
     assert(true, 'Flash loan executed successfully');
   } else {
@@ -366,18 +417,23 @@ async function main() {
   assert(!ordersJson.includes('"price"'), '/orders does not contain "price" field');
   assert(!ordersJson.includes('"amount"'), '/orders does not contain "amount" field');
   assert(!ordersJson.includes('"lockedAmount"'), '/orders does not contain "lockedAmount" field');
+  assert(!ordersJson.includes('"owner"'), '/orders does not contain "owner" field');
+  assert(!ordersJson.includes('"side"'), '/orders does not contain "side" field');
 
   const matchesResp = await fetchJson(`${BACKEND_URL}/matches`);
   const matchesJson = JSON.stringify(matchesResp);
   assert(!matchesJson.includes('"executionPrice"'), '/matches does not contain "executionPrice" field');
   assert(!matchesJson.includes('"executionAmount"'), '/matches does not contain "executionAmount" field');
   assert(!matchesJson.includes('"deepBookRefPrice"'), '/matches does not contain "deepBookRefPrice" field');
+  assert(!matchesJson.includes('"buyer"'), '/matches does not contain "buyer" field');
+  assert(!matchesJson.includes('"seller"'), '/matches does not contain "seller" field');
 
   const teeAttResp = await fetchJson(`${BACKEND_URL}/tee/attestations`);
   const teeAttJson = JSON.stringify(teeAttResp);
   assert(!teeAttJson.includes('"executionPrice"'), '/tee/attestations does not contain "executionPrice"');
   assert(!teeAttJson.includes('"executionAmount"'), '/tee/attestations does not contain "executionAmount"');
-  assert(teeAttJson.includes('"buyerCommitmentPrefix"'), '/tee/attestations uses commitment prefixes');
+  assert(teeAttJson.includes('"commitmentAPrefix"'), '/tee/attestations uses commitmentAPrefix');
+  assert(teeAttJson.includes('"commitmentBPrefix"'), '/tee/attestations uses commitmentBPrefix');
   console.log();
 
   // ── Phase 10: TEE Metrics Dashboard ────────────────────────────────
