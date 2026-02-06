@@ -75,14 +75,20 @@ export function useBackend() {
 
   const orders = useQuery<BackendOrder[]>({
     queryKey: ['backend-orders'],
-    queryFn: () => fetchBackend('/orders'),
+    queryFn: async () => {
+      const data = await fetchBackend('/orders');
+      return data.orders || [];
+    },
     refetchInterval: 3000,
     retry: 1,
   });
 
   const matches = useQuery<BackendMatch[]>({
     queryKey: ['backend-matches'],
-    queryFn: () => fetchBackend('/matches'),
+    queryFn: async () => {
+      const data = await fetchBackend('/matches');
+      return data.matches || [];
+    },
     refetchInterval: 3000,
     retry: 1,
   });
@@ -96,7 +102,10 @@ export function useBackend() {
 
   const teeAttestations = useQuery<TeeAttestation[]>({
     queryKey: ['tee-attestations'],
-    queryFn: () => fetchBackend('/tee/attestations'),
+    queryFn: async () => {
+      const data = await fetchBackend('/tee/attestations');
+      return data.attestations || [];
+    },
     refetchInterval: 10000,
     retry: 1,
   });

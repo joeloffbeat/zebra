@@ -134,16 +134,21 @@ app.get('/attestation', (req, res) => {
 // ── Privacy-hardened orders endpoint ─────────────────────────────────
 app.get('/orders', (req, res) => {
   const counts = orderBook.getOrderCount();
+  // Merge bids + asks into single array — no side distinction exposed
+  const allOrders = [
+    ...orderBook.getBids().map(o => ({
+      commitmentPrefix: o.commitment.slice(0, 16) + '...',
+      timestamp: o.timestamp,
+    })),
+    ...orderBook.getAsks().map(o => ({
+      commitmentPrefix: o.commitment.slice(0, 16) + '...',
+      timestamp: o.timestamp,
+    })),
+  ].sort((a, b) => b.timestamp - a.timestamp);
+
   res.json({
     counts,
-    bids: orderBook.getBids().map(o => ({
-      commitmentPrefix: o.commitment.slice(0, 16) + '...',
-      timestamp: o.timestamp,
-    })),
-    asks: orderBook.getAsks().map(o => ({
-      commitmentPrefix: o.commitment.slice(0, 16) + '...',
-      timestamp: o.timestamp,
-    })),
+    orders: allOrders,
   });
 });
 

@@ -115,7 +115,7 @@ export class SealService {
         side: data.side,
         price: BigInt(data.price),
         amount: BigInt(data.amount),
-        expiry: BigInt(data.expiry),
+        expiry: data.expiry ? BigInt(data.expiry) : 0n,
         locked_amount: data.locked_amount ? BigInt(data.locked_amount) : undefined,
       };
     } catch (error) {
