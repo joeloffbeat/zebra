@@ -1,6 +1,9 @@
 /**
  * Deploy Zebra Dark Pool to Sui Testnet
  *
+ * Privacy-preserving contract with single CoinType, unified submit_order,
+ * payout-based settlement, and stripped events.
+ *
  * Usage:
  * SUI_PRIVATE_KEY=suiprivkey1... npx tsx scripts/deploy.ts
  */
@@ -126,19 +129,17 @@ async function createPool(
 
   const poolId = Array.from(new TextEncoder().encode('ZEBRA_POOL_1'));
 
-  // create_pool now returns (AdminCap, MatcherCap)
+  // Single type argument: CoinType = SUI
   const [adminCap, matcherCap] = tx.moveCall({
     target: `${packageId}::dark_pool::create_pool`,
     typeArguments: [
-      '0x2::sui::SUI', // BaseAsset
-      '0x2::sui::SUI', // QuoteAsset (using SUI for testnet, would be USDC in prod)
+      '0x2::sui::SUI',
     ],
     arguments: [
       tx.pure(bcs.vector(bcs.u8()).serialize(vkBytes)),           // vk_bytes
       tx.pure(bcs.vector(bcs.u8()).serialize(poolId)),            // pool_id
       tx.pure(bcs.u64().serialize(1000000)),           // min_order_size (0.001 SUI)
       tx.pure(bcs.u64().serialize(1000000000000)),     // max_order_size (1000 SUI)
-      tx.pure(bcs.u64().serialize(100)),               // fee_bps (1%)
     ],
   });
 
@@ -236,7 +237,7 @@ async function saveDeploymentInfo(info: {
 }
 
 async function main() {
-  console.log('=== Zebra Dark Pool Deployment ===\n');
+  console.log('=== Zebra Dark Pool Deployment (Privacy Rewrite) ===\n');
 
   try {
     // 1. Get keypair
