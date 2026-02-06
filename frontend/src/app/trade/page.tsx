@@ -171,7 +171,7 @@ export default function TradePage() {
         {/* MARKET INFO BAR */}
         <div className="flex items-center gap-8 mb-8 pb-4 border-b border-border">
           <div className="flex items-center gap-4 text-xs tracking-wide">
-            <span className="opacity-100">SUI/SUI</span>
+            <span className="opacity-100">SUI/USD</span>
             <span className="font-mono text-muted-foreground">
               {midPriceValue ? `${midPriceValue}` : "—"}
             </span>
@@ -218,7 +218,7 @@ export default function TradePage() {
               <div className="space-y-2">
                 <Label>PAIR</Label>
                 <div className="text-xs tracking-widest border border-border p-3 text-muted-foreground">
-                  SUI / SUI (TESTNET)
+                  SUI / USD (TESTNET)
                 </div>
               </div>
 
@@ -266,7 +266,7 @@ export default function TradePage() {
 
               {/* PRICE */}
               <div className="space-y-2">
-                <Label>LIMIT PRICE (SUI)</Label>
+                <Label>LIMIT PRICE (USD)</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -278,7 +278,7 @@ export default function TradePage() {
                     step="0.01"
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
-                    SUI
+                    USD
                   </span>
                 </div>
               </div>
@@ -305,7 +305,7 @@ export default function TradePage() {
                   <span className="tracking-widest text-muted-foreground">
                     ORDER VALUE
                   </span>
-                  <span className="font-mono">{orderValue} SUI</span>
+                  <span className="font-mono">{orderValue} USD</span>
                 </div>
               </div>
 
@@ -506,8 +506,8 @@ export default function TradePage() {
           side: side,
           amount: amount,
           token: "SUI",
-          price: `${price} SUI`,
-          total: `${orderValue} SUI`,
+          price: `${price} USD`,
+          total: `${orderValue} USD`,
           expiry: EXPIRY_LABELS[expiry],
         }}
         onConfirm={handleConfirmOrder}
