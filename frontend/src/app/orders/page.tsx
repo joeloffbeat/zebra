@@ -52,8 +52,8 @@ export default function OrdersPage() {
     const prefix = commitment.slice(0, 14);
     const match = matches.data.find(
       (m) =>
-        m.buyerCommitmentPrefix === prefix ||
-        m.sellerCommitmentPrefix === prefix
+        m.commitmentAPrefix === prefix ||
+        m.commitmentBPrefix === prefix
     );
     return match?.settlementDigest;
   };
@@ -75,8 +75,8 @@ export default function OrdersPage() {
     }
   };
 
-  const handleCancel = async (commitment: string, side: string) => {
-    await cancelOrder(commitment, side === "buy");
+  const handleCancel = async (commitment: string) => {
+    await cancelOrder(commitment);
   };
 
   return (
@@ -182,11 +182,11 @@ export default function OrdersPage() {
                                 <div className="text-xs font-mono">
                                   {order.txDigest
                                     ? `TX: ${order.txDigest.slice(0, 10)}...`
-                                    : "—"}
+                                    : "\u2014"}
                                 </div>
                               ) : (
                                 <span className="text-xs text-muted-foreground">
-                                  —
+                                  {"\u2014"}
                                 </span>
                               )}
                             </TableCell>
@@ -198,10 +198,7 @@ export default function OrdersPage() {
                                 <Button
                                   size="sm"
                                   onClick={() =>
-                                    handleCancel(
-                                      order.commitment,
-                                      order.side
-                                    )
+                                    handleCancel(order.commitment)
                                   }
                                   disabled={isSubmitting}
                                 >
@@ -282,8 +279,8 @@ export default function OrdersPage() {
           open={showMatchModal}
           onOpenChange={setShowMatchModal}
           match={{
-            yourOrder: { side: "—", amount: "—", price: "—" },
-            matchedWith: { side: "—", amount: "—", price: "—" },
+            yourOrder: { side: "\u2014", amount: "\u2014", price: "\u2014" },
+            matchedWith: { side: "\u2014", amount: "\u2014", price: "\u2014" },
             executionPrice: "HIDDEN",
             via: "TEE MATCHER",
             settlement: latestMatch.settled ? "COMPLETE" : "PENDING",

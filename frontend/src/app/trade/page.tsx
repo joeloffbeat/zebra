@@ -31,7 +31,6 @@ import { useDarkPool } from "@/hooks/use-dark-pool";
 import { useBackend } from "@/hooks/use-backend";
 import { useOrderStatus } from "@/hooks/use-order-status";
 import { useWalletStore } from "@/lib/stores/wallet-store";
-import { useSuiClient } from "@mysten/dapp-kit";
 
 const EXPIRY_TO_SECONDS: Record<string, number> = {
   "1h": 3600,
@@ -67,12 +66,11 @@ export default function TradePage() {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  const { address, isConnected } = useWallet();
+  const { isConnected } = useWallet();
   const { balance } = useWalletStore();
   const { submitOrder, cancelOrder, isSubmitting, orders } = useDarkPool();
   const { matches, teeMetrics, midPrice: midPriceQuery } = useBackend();
   const { latestMatch, showMatchModal, setShowMatchModal } = useOrderStatus();
-  const suiClient = useSuiClient();
 
   const midPriceValue = midPriceQuery.data?.midPrice;
 
@@ -112,30 +110,11 @@ export default function TradePage() {
         Math.floor(Date.now() / 1000) + EXPIRY_TO_SECONDS[expiry]
       );
 
-      // Select a coin object
-      const coins = await suiClient.getCoins({
-        owner: address!,
-        coinType: "0x2::sui::SUI",
-      });
-
-      // Find a coin with enough balance (need amount for locking + some for gas)
-      const neededAmount = amountMist;
-      const selectedCoin = coins.data.find(
-        (c) => BigInt(c.balance) >= neededAmount
-      );
-
-      if (!selectedCoin) {
-        throw new Error(
-          `INSUFFICIENT BALANCE. NEED ${amount} SUI BUT NO COIN OBJECT HAS ENOUGH.`
-        );
-      }
-
       const order = await submitOrder({
         side: side.toLowerCase() as "buy" | "sell",
         amount: amountMist,
         price: priceMist,
         expiry: expiryTime,
-        coinObjectId: selectedCoin.coinObjectId,
       });
 
       if (order) {
@@ -150,11 +129,11 @@ export default function TradePage() {
     } finally {
       setIsProving(false);
     }
-  }, [amount, price, side, expiry, address, suiClient, submitOrder]);
+  }, [amount, price, side, expiry, submitOrder]);
 
   const handleCancel = useCallback(
-    async (commitment: string, orderSide: string) => {
-      await cancelOrder(commitment, orderSide === "buy");
+    async (commitment: string) => {
+      await cancelOrder(commitment);
     },
     [cancelOrder]
   );
@@ -173,7 +152,7 @@ export default function TradePage() {
           <div className="flex items-center gap-4 text-xs tracking-wide">
             <span className="opacity-100">SUI/USD</span>
             <span className="font-mono text-muted-foreground">
-              {midPriceValue ? `${midPriceValue}` : "—"}
+              {midPriceValue ? `${midPriceValue}` : "\u2014"}
             </span>
             <span className="text-[10px] text-muted-foreground">
               DEEPBOOK REF PRICE
@@ -192,7 +171,7 @@ export default function TradePage() {
                 AVAILABLE
               </span>
               <span className="font-mono text-sm ml-4">
-                {isConnected ? `${balance.sui} SUI` : "—"}
+                {isConnected ? `${balance.sui} SUI` : "\u2014"}
               </span>
             </div>
           </div>
@@ -351,7 +330,7 @@ export default function TradePage() {
             volume24h={
               teeMetrics.data
                 ? `${(teeMetrics.data.metrics.totalVolumeSettled / 1e9).toFixed(2)} SUI`
-                : "—"
+                : "\u2014"
             }
             spread={midPriceValue ? "~0.1%" : "N/A"}
           />
@@ -422,7 +401,7 @@ export default function TradePage() {
                               <Button
                                 size="sm"
                                 onClick={() =>
-                                  handleCancel(order.commitment, order.side)
+                                  handleCancel(order.commitment)
                                 }
                                 disabled={isSubmitting}
                               >
@@ -443,8 +422,8 @@ export default function TradePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>BUYER</TableHead>
-                      <TableHead>SELLER</TableHead>
+                      <TableHead>ORDER A</TableHead>
+                      <TableHead>ORDER B</TableHead>
                       <TableHead>SETTLED</TableHead>
                       <TableHead>TIME</TableHead>
                       <TableHead>TX</TableHead>
@@ -464,10 +443,10 @@ export default function TradePage() {
                       settledMatches.map((match, i) => (
                         <TableRow key={i}>
                           <TableCell className="font-mono text-xs">
-                            {match.buyerCommitmentPrefix}
+                            {match.commitmentAPrefix}
                           </TableCell>
                           <TableCell className="font-mono text-xs">
-                            {match.sellerCommitmentPrefix}
+                            {match.commitmentBPrefix}
                           </TableCell>
                           <TableCell>
                             <Badge variant="secondary">SETTLED</Badge>
@@ -519,8 +498,8 @@ export default function TradePage() {
           open={showMatchModal}
           onOpenChange={setShowMatchModal}
           match={{
-            yourOrder: { side: "—", amount: "—", price: "—" },
-            matchedWith: { side: "—", amount: "—", price: "—" },
+            yourOrder: { side: "\u2014", amount: "\u2014", price: "\u2014" },
+            matchedWith: { side: "\u2014", amount: "\u2014", price: "\u2014" },
             executionPrice: "HIDDEN",
             via: "TEE MATCHER",
             settlement: latestMatch.settled ? "COMPLETE" : "PENDING",

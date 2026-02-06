@@ -11,6 +11,11 @@ export async function submitHiddenOrder(
   params: SubmitOrderParams,
   signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> }
 ): Promise<HiddenOrder> {
+  // Seal encryption is mandatory
+  if (!SEAL_ALLOWLIST_ID) {
+    throw new Error('SEAL_ALLOWLIST_ID not configured — Seal encryption is mandatory');
+  }
+
   // Generate random secret and nonce
   const secretBytes = crypto.getRandomValues(new Uint8Array(31));
   const secret = BigInt('0x' + Array.from(secretBytes).map(b => b.toString(16).padStart(2, '0')).join(''));
@@ -38,50 +43,37 @@ export async function submitHiddenOrder(
   const commitmentBytes = hexToBytes(proofResult.commitment);
   const nullifierBytes = hexToBytes(proofResult.nullifier);
 
-  // Encrypt order details with Seal
-  let encryptedData = new Uint8Array(0);
-  if (SEAL_ALLOWLIST_ID) {
-    try {
-      const { encryptedBytes } = await encryptOrderData(
-        {
-          side: params.side === 'buy' ? 1 : 0,
-          price: params.price,
-          amount: params.amount,
-          expiry: params.expiry,
-        },
-        SEAL_ALLOWLIST_ID,
-      );
-      encryptedData = new Uint8Array(encryptedBytes);
-    } catch (error) {
-      console.warn('Seal encryption failed, submitting without encrypted data:', error);
-    }
-  }
+  // Encrypt order details with Seal (mandatory)
+  const { encryptedBytes } = await encryptOrderData(
+    {
+      side: params.side === 'buy' ? 1 : 0,
+      price: params.price,
+      amount: params.amount,
+    },
+    SEAL_ALLOWLIST_ID,
+  );
+  const encryptedData = new Uint8Array(encryptedBytes);
 
-  // Build transaction
+  // Build transaction — unified submit_order, single type arg, splitCoins for locking
   const tx = new Transaction();
-
-  const target = params.side === 'buy'
-    ? `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_buy_order`
-    : `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_sell_order`;
 
   const vecU8 = bcs.vector(bcs.u8());
 
+  // Split exact amount from gas coin for locking
+  const [lockCoin] = tx.splitCoins(tx.gas, [params.amount]);
+
   tx.moveCall({
-    target,
+    target: `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_order`,
     arguments: [
       tx.object(CONTRACTS.DARK_POOL_OBJECT),
-      tx.object(params.coinObjectId),
+      lockCoin,
       tx.pure(vecU8.serialize(Array.from(proofBytes))),
       tx.pure(vecU8.serialize(Array.from(publicInputBytes))),
       tx.pure(vecU8.serialize(Array.from(commitmentBytes))),
       tx.pure(vecU8.serialize(Array.from(nullifierBytes))),
-      tx.pure(bcs.u64().serialize(params.expiry)),
       tx.pure(vecU8.serialize(Array.from(encryptedData))),
     ],
-    typeArguments: [
-      '0x2::sui::SUI',
-      '0x2::sui::SUI',
-    ],
+    typeArguments: ['0x2::sui::SUI'],
   });
 
   const result = await signer.signAndExecuteTransaction({
@@ -106,27 +98,19 @@ export async function submitHiddenOrder(
 
 export async function cancelOrder(
   commitment: string,
-  isBid: boolean,
   signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> }
 ): Promise<string> {
   const tx = new Transaction();
 
-  const target = isBid
-    ? `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::cancel_buy_order`
-    : `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::cancel_sell_order`;
-
   const vecU8 = bcs.vector(bcs.u8());
 
   tx.moveCall({
-    target,
+    target: `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::cancel_order`,
     arguments: [
       tx.object(CONTRACTS.DARK_POOL_OBJECT),
       tx.pure(vecU8.serialize(Array.from(hexToBytes(commitment)))),
     ],
-    typeArguments: [
-      '0x2::sui::SUI',
-      '0x2::sui::SUI',
-    ],
+    typeArguments: ['0x2::sui::SUI'],
   });
 
   const result = await signer.signAndExecuteTransaction({

@@ -15,7 +15,7 @@ export function useOrderStatus() {
     if (!matches.data || !orders.length) return;
 
     for (const match of matches.data) {
-      const key = `${match.buyerCommitmentPrefix}-${match.sellerCommitmentPrefix}`;
+      const key = `${match.commitmentAPrefix}-${match.commitmentBPrefix}`;
 
       // Find if any local order matches this commitment prefix
       for (const order of orders) {
@@ -25,8 +25,8 @@ export function useOrderStatus() {
         const commitmentPrefix = order.commitment.slice(0, 14);
 
         const isMatch =
-          match.buyerCommitmentPrefix === commitmentPrefix ||
-          match.sellerCommitmentPrefix === commitmentPrefix;
+          match.commitmentAPrefix === commitmentPrefix ||
+          match.commitmentBPrefix === commitmentPrefix;
 
         if (isMatch) {
           if (match.settled && orderStatus !== 'settled') {

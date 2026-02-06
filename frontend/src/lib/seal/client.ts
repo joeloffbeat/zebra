@@ -2,12 +2,12 @@ import { SealClient } from '@mysten/seal';
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 
 // Seal package for allowlist-based access control
-const SEAL_PACKAGE_ID = '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
+const SEAL_PACKAGE_ID = process.env.NEXT_PUBLIC_SEAL_PACKAGE_ID || '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
 
-// Testnet key server object IDs
+// Testnet key server object IDs (real, verified working)
 const TESTNET_KEY_SERVERS = [
-  '0x7d57e79c9e3e3c2a4f1e6e9f1b2c3d4e5f6a7b8c',
-  '0x8e68f80d0e4e4d3b5a2f7f0b2c3d4e5f6a7b8c9d',
+  '0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75',
+  '0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8',
 ];
 
 let sealClient: SealClient | null = null;
@@ -32,7 +32,6 @@ export interface OrderData {
   side: number; // 0 = sell, 1 = buy
   price: bigint;
   amount: bigint;
-  expiry: bigint;
 }
 
 export interface EncryptedOrderResult {
@@ -52,7 +51,6 @@ export async function encryptOrderData(
     side: orderData.side,
     price: orderData.price.toString(),
     amount: orderData.amount.toString(),
-    expiry: orderData.expiry.toString(),
   });
   const dataBytes = encoder.encode(dataStr);
 

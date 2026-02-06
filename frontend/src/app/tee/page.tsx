@@ -25,7 +25,7 @@ function timeAgo(ts: number): string {
 }
 
 function truncate(hex: string, len = 14): string {
-  if (!hex) return "—";
+  if (!hex) return "\u2014";
   if (hex.length <= len) return hex;
   return hex.slice(0, len) + "...";
 }
@@ -49,7 +49,7 @@ export default function TeePage() {
       });
       setFlashLoanResult(
         result.success
-          ? `SUCCESS — TX: ${result.digest?.slice(0, 16)}...`
+          ? `SUCCESS \u2014 TX: ${result.digest?.slice(0, 16)}...`
           : `RESULT: ${result.error || result.message || "UNKNOWN"}`
       );
     } catch (err: unknown) {
@@ -66,7 +66,7 @@ export default function TeePage() {
         <div className="mb-8">
           <h1 className="text-lg tracking-widest mb-2">TEE DASHBOARD</h1>
           <p className="text-xs tracking-wide text-muted-foreground">
-            TRUSTED EXECUTION ENVIRONMENT — MATCHING ENGINE STATUS
+            TRUSTED EXECUTION ENVIRONMENT \u2014 MATCHING ENGINE STATUS
           </p>
         </div>
 
@@ -117,7 +117,7 @@ export default function TeePage() {
                     UPTIME
                   </span>
                   <p className="font-mono text-sm mt-1">
-                    {metrics ? formatUptime(metrics.uptime) : "—"}
+                    {metrics ? formatUptime(metrics.uptime) : "\u2014"}
                   </p>
                 </div>
                 <div>
@@ -125,7 +125,7 @@ export default function TeePage() {
                     PUBLIC KEY
                   </span>
                   <p className="font-mono text-[10px] mt-1 break-all">
-                    {metrics?.publicKey ? truncate(metrics.publicKey, 40) : "—"}
+                    {metrics?.publicKey ? truncate(metrics.publicKey, 40) : "\u2014"}
                   </p>
                 </div>
                 <div>
@@ -135,7 +135,7 @@ export default function TeePage() {
                   <p className="font-mono text-[10px] mt-1 break-all">
                     {metrics?.matcherAddress
                       ? truncate(metrics.matcherAddress, 20)
-                      : "—"}
+                      : "\u2014"}
                   </p>
                 </div>
               </div>
@@ -251,9 +251,9 @@ export default function TeePage() {
                       className="border border-border p-4 space-y-2"
                     >
                       <div className="flex items-center gap-2 text-[10px] font-mono">
-                        <span>{truncate(att.buyerCommitmentPrefix)}</span>
+                        <span>{truncate(att.commitmentAPrefix)}</span>
                         <span className="text-muted-foreground">&harr;</span>
-                        <span>{truncate(att.sellerCommitmentPrefix)}</span>
+                        <span>{truncate(att.commitmentBPrefix)}</span>
                       </div>
                       <div className="flex items-center justify-between text-[10px]">
                         <span className="text-muted-foreground font-mono">
@@ -279,7 +279,7 @@ export default function TeePage() {
               <div className="p-6 space-y-4">
                 <p className="text-[10px] tracking-wide text-muted-foreground">
                   TRIGGER A DEEPBOOK V3 FLASH LOAN VIA THE TEE BACKEND.
-                  THIS IS A DEMO — KNOWN TESTNET LIMITATIONS MAY APPLY.
+                  THIS IS A DEMO \u2014 KNOWN TESTNET LIMITATIONS MAY APPLY.
                 </p>
                 <div className="flex items-center gap-4">
                   <div className="flex-1">

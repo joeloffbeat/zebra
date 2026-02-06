@@ -23,7 +23,6 @@ async function postBackend(path: string, body?: Record<string, unknown>) {
 export interface BackendStatus {
   status: string;
   matcherAddress: string;
-  sealConfigured: boolean;
   teeMode: string;
   uptime: number;
   orderBook: { bids: number; asks: number; pendingDecryption: number };
@@ -31,14 +30,12 @@ export interface BackendStatus {
 
 export interface BackendOrder {
   commitmentPrefix: string;
-  owner: string;
   timestamp: number;
-  side: 'buy' | 'sell';
 }
 
 export interface BackendMatch {
-  buyerCommitmentPrefix: string;
-  sellerCommitmentPrefix: string;
+  commitmentAPrefix: string;
+  commitmentBPrefix: string;
   timestamp: number;
   settled: boolean;
   settlementDigest?: string;
@@ -62,8 +59,8 @@ export interface TeeMetrics {
 }
 
 export interface TeeAttestation {
-  buyerCommitmentPrefix: string;
-  sellerCommitmentPrefix: string;
+  commitmentAPrefix: string;
+  commitmentBPrefix: string;
   signature: string;
   timestamp: number;
 }

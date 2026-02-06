@@ -34,13 +34,12 @@ export function useDarkPool() {
 
   const cancelOrderByCommitment = useCallback(async (
     commitment: string,
-    isBid: boolean
   ): Promise<boolean> => {
     setIsSubmitting(true);
     setError(null);
 
     try {
-      await cancelOrder(commitment, isBid, {
+      await cancelOrder(commitment, {
         signAndExecuteTransaction: signAndExecute,
       });
 

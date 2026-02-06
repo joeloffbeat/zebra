@@ -18,7 +18,6 @@ export interface SubmitOrderParams {
   amount: bigint;
   price: bigint;
   expiry: bigint;
-  coinObjectId: string;
 }
 
 export interface ProofResult {
