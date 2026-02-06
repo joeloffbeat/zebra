@@ -31,13 +31,12 @@ function truncate(hex: string, len = 14): string {
 }
 
 export default function TeePage() {
-  const { teeMetrics, teeAttestations, status, flashLoanDemo } = useBackend();
+  const { teeMetrics, teeAttestations, flashLoanDemo } = useBackend();
   const [flashLoanAmount, setFlashLoanAmount] = useState("1000000000");
   const [flashLoanResult, setFlashLoanResult] = useState<string | null>(null);
 
   const metrics = teeMetrics.data;
   const attestations = teeAttestations.data || [];
-  const backendStatus = status.data;
 
   const isLoading = teeMetrics.isLoading;
   const isError = teeMetrics.isError;

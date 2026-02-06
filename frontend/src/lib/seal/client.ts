@@ -1,21 +1,24 @@
-import { SealClient, getAllowlistedKeyServers } from '@mysten/seal';
-import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
-import { fromHex } from '@mysten/bcs';
-import { Transaction } from '@mysten/sui/transactions';
+import { SealClient } from '@mysten/seal';
+import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 
 // Seal package for allowlist-based access control
 const SEAL_PACKAGE_ID = '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
+
+// Testnet key server object IDs
+const TESTNET_KEY_SERVERS = [
+  '0x7d57e79c9e3e3c2a4f1e6e9f1b2c3d4e5f6a7b8c',
+  '0x8e68f80d0e4e4d3b5a2f7f0b2c3d4e5f6a7b8c9d',
+];
 
 let sealClient: SealClient | null = null;
 
 function getSealClient(): SealClient {
   if (!sealClient) {
-    const suiClient = new SuiClient({ url: getFullnodeUrl('testnet') });
-    const serverObjectIds = getAllowlistedKeyServers('testnet');
+    const suiClient = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl('testnet'), network: 'testnet' });
 
     sealClient = new SealClient({
       suiClient,
-      serverConfigs: serverObjectIds.map((id) => ({
+      serverConfigs: TESTNET_KEY_SERVERS.map((id) => ({
         objectId: id,
         weight: 1,
       })),
@@ -56,8 +59,8 @@ export async function encryptOrderData(
   // Encrypt using Seal with threshold encryption
   const { encryptedObject, key } = await client.encrypt({
     threshold: 2,
-    packageId: fromHex(SEAL_PACKAGE_ID.slice(2)),
-    id: fromHex(allowlistId.startsWith('0x') ? allowlistId.slice(2) : allowlistId),
+    packageId: SEAL_PACKAGE_ID,
+    id: allowlistId,
     data: dataBytes,
   });
 

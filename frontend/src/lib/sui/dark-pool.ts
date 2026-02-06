@@ -1,5 +1,6 @@
 import { Transaction } from '@mysten/sui/transactions';
-import { suiClient, CONTRACTS } from './client';
+import { bcs } from '@mysten/sui/bcs';
+import { CONTRACTS } from './client';
 import { SubmitOrderParams, HiddenOrder } from './types';
 import { generateOrderProof, proofToSuiFormat, publicSignalsToSuiFormat, hexToBytes } from '../zk/prover';
 import { encryptOrderData } from '../seal/client';
@@ -8,7 +9,7 @@ const SEAL_ALLOWLIST_ID = process.env.NEXT_PUBLIC_SEAL_ALLOWLIST_ID || '';
 
 export async function submitHiddenOrder(
   params: SubmitOrderParams,
-  signer: any
+  signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> }
 ): Promise<HiddenOrder> {
   // Generate random secret and nonce
   const secretBytes = crypto.getRandomValues(new Uint8Array(31));
@@ -50,7 +51,7 @@ export async function submitHiddenOrder(
         },
         SEAL_ALLOWLIST_ID,
       );
-      encryptedData = encryptedBytes;
+      encryptedData = new Uint8Array(encryptedBytes);
     } catch (error) {
       console.warn('Seal encryption failed, submitting without encrypted data:', error);
     }
@@ -63,17 +64,19 @@ export async function submitHiddenOrder(
     ? `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_buy_order`
     : `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_sell_order`;
 
+  const vecU8 = bcs.vector(bcs.u8());
+
   tx.moveCall({
     target,
     arguments: [
       tx.object(CONTRACTS.DARK_POOL_OBJECT),
       tx.object(params.coinObjectId),
-      tx.pure(Array.from(proofBytes)),
-      tx.pure(Array.from(publicInputBytes)),
-      tx.pure(Array.from(commitmentBytes)),
-      tx.pure(Array.from(nullifierBytes)),
-      tx.pure(params.expiry),
-      tx.pure(Array.from(encryptedData)),
+      tx.pure(vecU8.serialize(Array.from(proofBytes))),
+      tx.pure(vecU8.serialize(Array.from(publicInputBytes))),
+      tx.pure(vecU8.serialize(Array.from(commitmentBytes))),
+      tx.pure(vecU8.serialize(Array.from(nullifierBytes))),
+      tx.pure(bcs.u64().serialize(params.expiry)),
+      tx.pure(vecU8.serialize(Array.from(encryptedData))),
     ],
     typeArguments: [
       '0x2::sui::SUI',
@@ -104,7 +107,7 @@ export async function submitHiddenOrder(
 export async function cancelOrder(
   commitment: string,
   isBid: boolean,
-  signer: any
+  signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> }
 ): Promise<string> {
   const tx = new Transaction();
 
@@ -112,11 +115,13 @@ export async function cancelOrder(
     ? `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::cancel_buy_order`
     : `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::cancel_sell_order`;
 
+  const vecU8 = bcs.vector(bcs.u8());
+
   tx.moveCall({
     target,
     arguments: [
       tx.object(CONTRACTS.DARK_POOL_OBJECT),
-      tx.pure(Array.from(hexToBytes(commitment))),
+      tx.pure(vecU8.serialize(Array.from(hexToBytes(commitment)))),
     ],
     typeArguments: [
       '0x2::sui::SUI',

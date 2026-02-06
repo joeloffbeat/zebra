@@ -1,13 +1,12 @@
 'use client';
 
-import { useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { useSignAndExecuteTransaction } from '@mysten/dapp-kit';
 import { useCallback, useState } from 'react';
 import { useOrderStore } from '@/lib/stores/order-store';
 import { submitHiddenOrder, cancelOrder } from '@/lib/sui/dark-pool';
 import { SubmitOrderParams, HiddenOrder } from '@/lib/sui/types';
 
 export function useDarkPool() {
-  const client = useSuiClient();
   const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
   const { addOrder, updateOrderStatus, orders } = useOrderStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -24,8 +23,9 @@ export function useDarkPool() {
 
       addOrder(order);
       return order;
-    } catch (err: any) {
-      setError(err.message || 'Failed to submit order');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to submit order';
+      setError(message);
       return null;
     } finally {
       setIsSubmitting(false);
@@ -46,8 +46,9 @@ export function useDarkPool() {
 
       updateOrderStatus(commitment, 'cancelled');
       return true;
-    } catch (err: any) {
-      setError(err.message || 'Failed to cancel order');
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Failed to cancel order';
+      setError(message);
       return false;
     } finally {
       setIsSubmitting(false);
@@ -69,4 +70,3 @@ export function useDarkPool() {
     settledOrders,
   };
 }
-

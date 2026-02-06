@@ -1,10 +1,11 @@
-import { SuiClient, getFullnodeUrl } from '@mysten/sui/client';
+import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { Transaction } from '@mysten/sui/transactions';
 
 export const NETWORK = 'testnet';
 
-export const suiClient = new SuiClient({
-  url: getFullnodeUrl(NETWORK),
+export const suiClient = new SuiJsonRpcClient({
+  url: getJsonRpcFullnodeUrl(NETWORK),
+  network: NETWORK,
 });
 
 export const CONTRACTS = {
@@ -18,4 +19,3 @@ export function setContractAddresses(packageId: string, poolObjectId: string) {
 }
 
 export { Transaction };
-

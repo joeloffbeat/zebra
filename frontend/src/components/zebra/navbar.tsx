@@ -20,7 +20,7 @@ function truncateAddress(address: string): string {
 
 export function Navbar() {
   const pathname = usePathname();
-  const { address, isConnected, connect, disconnect, availableWallets } = useWallet();
+  const { address, isConnected, connect, disconnect } = useWallet();
   const { balance } = useWalletStore();
   const [walletModalOpen, setWalletModalOpen] = useState(false);
 

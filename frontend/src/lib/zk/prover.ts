@@ -1,5 +1,6 @@
 import { OrderInput, ProofResult } from '../sui/types';
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 let snarkjs: any = null;
 let circuitWasm: ArrayBuffer | null = null;
 let circuitZkey: ArrayBuffer | null = null;

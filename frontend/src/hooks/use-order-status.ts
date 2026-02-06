@@ -19,7 +19,8 @@ export function useOrderStatus() {
 
       // Find if any local order matches this commitment prefix
       for (const order of orders) {
-        if (order.status === 'settled' || order.status === 'cancelled') continue;
+        const orderStatus = order.status as string;
+        if (orderStatus === 'settled' || orderStatus === 'cancelled') continue;
 
         const commitmentPrefix = order.commitment.slice(0, 14);
 
@@ -28,7 +29,7 @@ export function useOrderStatus() {
           match.sellerCommitmentPrefix === commitmentPrefix;
 
         if (isMatch) {
-          if (match.settled && order.status !== 'settled') {
+          if (match.settled && orderStatus !== 'settled') {
             updateOrderStatus(order.commitment, 'settled');
 
             if (!seenSettlements.current.has(key)) {

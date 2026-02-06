@@ -97,9 +97,17 @@ export default function LandingPage() {
           <header className="border-b border-border bg-background">
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
               <span className="text-sm tracking-widest">ZEBRA</span>
-              <Link href="/trade">
-                <Button>TRADE</Button>
-              </Link>
+              <div className="flex items-center gap-6">
+                <Link
+                  href="/tee"
+                  className="text-xs tracking-widest opacity-40 hover:opacity-60 transition-opacity"
+                >
+                  TEE
+                </Link>
+                <Link href="/trade">
+                  <Button>TRADE</Button>
+                </Link>
+              </div>
             </div>
           </header>
 
@@ -183,17 +191,17 @@ export default function LandingPage() {
               </div>
               <div className="border border-border p-6 space-y-3">
                 <div className="text-xs tracking-widest text-muted-foreground">02</div>
-                <h3 className="text-sm tracking-widest">INSTANT MATCHING</h3>
+                <h3 className="text-sm tracking-widest">TEE MATCHING</h3>
                 <p className="text-[10px] tracking-wide text-muted-foreground leading-relaxed">
-                  ORDERS ARE MATCHED WHEN PRICE RANGES OVERLAP.
-                  EXECUTION AT MIDPOINT FOR FAIR PRICING.
+                  ORDERS MATCHED IN A TRUSTED EXECUTION ENVIRONMENT.
+                  TAMPER-PROOF, ATTESTABLE, PRIVACY-PRESERVING.
                 </p>
               </div>
               <div className="border border-border p-6 space-y-3">
                 <div className="text-xs tracking-widest text-muted-foreground">03</div>
-                <h3 className="text-sm tracking-widest">DEEPBOOK SETTLEMENT</h3>
+                <h3 className="text-sm tracking-widest">ON-CHAIN SETTLEMENT</h3>
                 <p className="text-[10px] tracking-wide text-muted-foreground leading-relaxed">
-                  ATOMIC SETTLEMENT VIA DEEPBOOK V3.
+                  ATOMIC SETTLEMENT ON SUI WITH DEEPBOOK V3 INTEGRATION.
                   YOUR FUNDS ARE ALWAYS SECURE.
                 </p>
               </div>
@@ -205,9 +213,30 @@ export default function LandingPage() {
                 <span className="text-xs tracking-widest text-muted-foreground">POWERED BY</span>
               </div>
               <div className="flex items-center justify-center gap-12">
-                <span className="text-sm tracking-widest">SUI</span>
-                <span className="text-sm tracking-widest">DEEPBOOK</span>
-                <span className="text-sm tracking-widest">LI.FI</span>
+                <a
+                  href="https://sui.io"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm tracking-widest hover:opacity-60 transition-opacity"
+                >
+                  SUI
+                </a>
+                <a
+                  href="https://deepbook.tech"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm tracking-widest hover:opacity-60 transition-opacity"
+                >
+                  DEEPBOOK
+                </a>
+                <a
+                  href="https://www.marlin.org/oyster"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-sm tracking-widest hover:opacity-60 transition-opacity"
+                >
+                  MARLIN OYSTER
+                </a>
               </div>
             </div>
 
@@ -235,4 +264,3 @@ export default function LandingPage() {
     </div>
   );
 }
-

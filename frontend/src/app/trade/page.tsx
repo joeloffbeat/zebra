@@ -33,6 +33,20 @@ import { useOrderStatus } from "@/hooks/use-order-status";
 import { useWalletStore } from "@/lib/stores/wallet-store";
 import { useSuiClient } from "@mysten/dapp-kit";
 
+const EXPIRY_TO_SECONDS: Record<string, number> = {
+  "1h": 3600,
+  "6h": 21600,
+  "24h": 86400,
+  "7d": 604800,
+};
+
+const EXPIRY_LABELS: Record<string, string> = {
+  "1h": "1 HOUR",
+  "6h": "6 HOURS",
+  "24h": "24 HOURS",
+  "7d": "7 DAYS",
+};
+
 function timeAgo(ts: number): string {
   const diff = Date.now() - ts;
   const mins = Math.floor(diff / 60000);
@@ -68,20 +82,6 @@ export default function TradePage() {
 
   const settledMatches = matches.data?.filter((m) => m.settled) || [];
 
-  const expiryToSeconds: Record<string, number> = {
-    "1h": 3600,
-    "6h": 21600,
-    "24h": 86400,
-    "7d": 604800,
-  };
-
-  const expiryLabels: Record<string, string> = {
-    "1h": "1 HOUR",
-    "6h": "6 HOURS",
-    "24h": "24 HOURS",
-    "7d": "7 DAYS",
-  };
-
   const handleSubmit = useCallback(() => {
     setSubmitError(null);
     if (!isConnected) {
@@ -109,7 +109,7 @@ export default function TradePage() {
       const amountMist = BigInt(Math.floor(parseFloat(amount) * 1e9));
       const priceMist = BigInt(Math.floor(parseFloat(price) * 1e9));
       const expiryTime = BigInt(
-        Math.floor(Date.now() / 1000) + expiryToSeconds[expiry]
+        Math.floor(Date.now() / 1000) + EXPIRY_TO_SECONDS[expiry]
       );
 
       // Select a coin object
@@ -120,7 +120,7 @@ export default function TradePage() {
 
       // Find a coin with enough balance (need amount for locking + some for gas)
       const neededAmount = amountMist;
-      let selectedCoin = coins.data.find(
+      const selectedCoin = coins.data.find(
         (c) => BigInt(c.balance) >= neededAmount
       );
 
@@ -508,7 +508,7 @@ export default function TradePage() {
           token: "SUI",
           price: `${price} SUI`,
           total: `${orderValue} SUI`,
-          expiry: expiryLabels[expiry],
+          expiry: EXPIRY_LABELS[expiry],
         }}
         onConfirm={handleConfirmOrder}
       />
