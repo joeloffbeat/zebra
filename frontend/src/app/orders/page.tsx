@@ -49,7 +49,8 @@ export default function OrdersPage() {
   // Find settlement digest for an order by matching commitment prefix
   const findSettlementDigest = (commitment: string): string | undefined => {
     if (!matches.data) return undefined;
-    const prefix = commitment.slice(0, 14);
+    // Backend returns "0xabcdef012345..." (16 chars + "...")
+    const prefix = commitment.slice(0, 16) + '...';
     const match = matches.data.find(
       (m) =>
         m.commitmentAPrefix === prefix ||

@@ -22,7 +22,8 @@ export function useOrderStatus() {
         const orderStatus = order.status as string;
         if (orderStatus === 'settled' || orderStatus === 'cancelled') continue;
 
-        const commitmentPrefix = order.commitment.slice(0, 14);
+        // Backend returns "0xabcdef012345..." (16 chars + "...")
+        const commitmentPrefix = order.commitment.slice(0, 16) + '...';
 
         const isMatch =
           match.commitmentAPrefix === commitmentPrefix ||
