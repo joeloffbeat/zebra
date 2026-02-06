@@ -49,14 +49,16 @@ export class SettlementService {
       const commitmentBBytes = this.hexStringToBytes(match.seller.commitment);
 
       // Calculate payouts (TEE computes, contract enforces solvency)
-      const quoteCost = match.executionAmount * match.executionPrice / 1_000_000_000n;
+      // Single-CoinType model (SUI/SUI): both sides lock the same token.
+      // Price is used for matching priority, not for cross-token exchange.
+      // Settlement redistributes locked SUI: each party gets back their locked amount.
+      // The "trade" is recorded on-chain via events — the matching is the value, not token swap.
       const buyerLocked = match.buyer.decryptedLockedAmount;
       const sellerLocked = match.seller.decryptedLockedAmount;
 
-      // Buyer gets: executionAmount (base tokens bought) + refund of excess locked quote
-      // Seller gets: quoteCost (payment) + refund of excess locked base
-      const payoutBuyer = match.executionAmount + (buyerLocked > quoteCost ? buyerLocked - quoteCost : 0n);
-      const payoutSeller = quoteCost + (sellerLocked > match.executionAmount ? sellerLocked - match.executionAmount : 0n);
+      // Solvency guaranteed: payoutA + payoutB == lockedA + lockedB
+      const payoutBuyer = buyerLocked;
+      const payoutSeller = sellerLocked;
 
       tx.moveCall({
         target: `${config.darkPoolPackage}::dark_pool::settle_match`,

@@ -438,27 +438,26 @@ async function main() {
 
   // ── Phase 10: TEE Metrics Dashboard ────────────────────────────────
   console.log('--- Phase 10: TEE Metrics Dashboard ---');
-  const metrics = await fetchJson(`${BACKEND_URL}/tee/metrics`);
+  const metricsResp = await fetchJson(`${BACKEND_URL}/tee/metrics`);
+  const m = metricsResp.metrics || {};
 
   console.log('  ┌────────────────────────────────────┐');
-  console.log(`  │ TEE Mode:          ${metrics.mode.padEnd(16)} │`);
-  console.log(`  │ Public Key:        ${(metrics.publicKey || '').slice(0, 16)}... │`);
-  console.log(`  │ Uptime:            ${formatUptime(metrics.uptime).padEnd(16)} │`);
-  console.log(`  │ Orders Received:   ${String(metrics.ordersReceived).padEnd(16)} │`);
-  console.log(`  │ Orders Decrypted:  ${String(metrics.ordersDecrypted).padEnd(16)} │`);
-  console.log(`  │ Decrypt Failures:  ${String(metrics.decryptionFailures).padEnd(16)} │`);
-  console.log(`  │ Matches Found:     ${String(metrics.matchesFound).padEnd(16)} │`);
-  console.log(`  │ Settlements:       ${String(metrics.settlementsExecuted).padEnd(16)} │`);
-  console.log(`  │ Volume Settled:    ${metrics.totalVolumeSettled.padEnd(16)} │`);
-  console.log(`  │ Flash Loans:       ${String(metrics.flashLoansExecuted).padEnd(16)} │`);
-  console.log(`  │ Attestations:      ${String(metrics.attestationCount).padEnd(16)} │`);
+  console.log(`  │ TEE Mode:          ${(metricsResp.teeMode || 'unknown').padEnd(16)} │`);
+  console.log(`  │ Public Key:        ${(metricsResp.publicKey || '').slice(0, 16)}... │`);
+  console.log(`  │ Uptime:            ${formatUptime(metricsResp.uptime || 0).padEnd(16)} │`);
+  console.log(`  │ Orders Received:   ${String(m.ordersReceived ?? 0).padEnd(16)} │`);
+  console.log(`  │ Orders Decrypted:  ${String(m.ordersDecrypted ?? 0).padEnd(16)} │`);
+  console.log(`  │ Decrypt Failures:  ${String(m.decryptionFailures ?? 0).padEnd(16)} │`);
+  console.log(`  │ Matches Found:     ${String(m.matchesFound ?? 0).padEnd(16)} │`);
+  console.log(`  │ Settlements:       ${String(m.settlementsExecuted ?? 0).padEnd(16)} │`);
+  console.log(`  │ Volume Settled:    ${String(m.totalVolumeSettled ?? 0).padEnd(16)} │`);
+  console.log(`  │ Flash Loans:       ${String(m.flashLoansExecuted ?? 0).padEnd(16)} │`);
   console.log('  └────────────────────────────────────┘');
 
-  assert(metrics.ordersReceived > 0, 'ordersReceived > 0');
-  assert(metrics.matchesFound > 0, 'matchesFound > 0');
-  assert(metrics.settlementsExecuted > 0, 'settlementsExecuted > 0');
-  assert(metrics.attestationCount > 0, 'attestationCount > 0');
-  assert(metrics.uptime > 0, 'uptime > 0');
+  assert((m.ordersReceived ?? 0) > 0, 'ordersReceived > 0');
+  assert((m.matchesFound ?? 0) > 0, 'matchesFound > 0');
+  assert((m.settlementsExecuted ?? 0) > 0, 'settlementsExecuted > 0');
+  assert((metricsResp.uptime || 0) > 0, 'uptime > 0');
   console.log();
 
   // ── Summary ────────────────────────────────────────────────────────

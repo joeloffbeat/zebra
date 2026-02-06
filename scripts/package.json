@@ -9,7 +9,10 @@
     "setup:seal": "tsx setup-seal.ts"
   },
   "dependencies": {
+    "@mysten/seal": "^1.0.0",
     "@mysten/sui": "^2.1.0",
+    "@noble/curves": "^2.0.1",
+    "@noble/hashes": "^2.0.1",
     "dotenv": "^16.4.0",
     "snarkjs": "^0.7.0"
   },
