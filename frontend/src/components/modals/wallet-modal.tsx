@@ -7,6 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui";
+import { useWallet } from "@/hooks/use-wallet";
 
 interface WalletModalProps {
   open: boolean;
@@ -14,18 +15,21 @@ interface WalletModalProps {
   onConnect: (wallet: string) => void;
 }
 
-const WALLETS = [
-  { id: "sui", name: "SUI WALLET" },
-  { id: "suiet", name: "SUIET" },
-  { id: "ethos", name: "ETHOS" },
-  { id: "martian", name: "MARTIAN" },
-];
-
 export function WalletModal({ open, onOpenChange, onConnect }: WalletModalProps) {
-  const handleConnect = (walletId: string) => {
-    onConnect(walletId);
+  const { availableWallets } = useWallet();
+
+  const handleConnect = (walletName: string) => {
+    onConnect(walletName);
     onOpenChange(false);
   };
+
+  const wallets = availableWallets.length > 0
+    ? availableWallets
+    : [
+        { name: "Sui Wallet", icon: "" },
+        { name: "Suiet", icon: "" },
+        { name: "Ethos Wallet", icon: "" },
+      ];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -38,16 +42,28 @@ export function WalletModal({ open, onOpenChange, onConnect }: WalletModalProps)
         </DialogHeader>
 
         <div className="p-6 space-y-2">
-          {WALLETS.map((wallet) => (
+          {wallets.map((wallet) => (
             <button
-              key={wallet.id}
-              onClick={() => handleConnect(wallet.id)}
+              key={wallet.name}
+              onClick={() => handleConnect(wallet.name)}
               className="w-full border border-border p-4 flex items-center justify-between text-xs tracking-widest hover:opacity-60 transition-opacity"
             >
-              <span>{wallet.name}</span>
+              <div className="flex items-center gap-3">
+                {wallet.icon && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={wallet.icon} alt="" className="w-5 h-5" />
+                )}
+                <span>{wallet.name.toUpperCase()}</span>
+              </div>
               <span className="text-muted-foreground">&rarr;</span>
             </button>
           ))}
+
+          {availableWallets.length === 0 && (
+            <p className="text-[10px] tracking-wide text-muted-foreground text-center pt-2">
+              NO WALLETS DETECTED. INSTALL A SUI WALLET EXTENSION.
+            </p>
+          )}
 
           <p className="text-[10px] tracking-wide text-muted-foreground text-center pt-4">
             BY CONNECTING, YOU AGREE TO OUR TERMS
@@ -57,4 +73,3 @@ export function WalletModal({ open, onOpenChange, onConnect }: WalletModalProps)
     </Dialog>
   );
 }
-

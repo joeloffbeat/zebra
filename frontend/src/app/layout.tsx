@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Inter, Space_Mono, Bebas_Neue } from "next/font/google";
 import "./globals.css";
+import "@mysten/dapp-kit/dist/index.css";
 import { cn } from "@/lib/utils";
+import { SuiProvider } from "@/providers/sui-provider";
 
 const inter = Inter({
   variable: "--font-inter",
@@ -40,9 +42,8 @@ export default function RootLayout({
           "min-h-screen bg-background text-foreground antialiased"
         )}
       >
-        {children}
+        <SuiProvider>{children}</SuiProvider>
       </body>
     </html>
   );
 }
-
