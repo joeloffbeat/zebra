@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Button,
   Input,
@@ -23,111 +22,185 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui";
+import { Navbar } from "@/components/zebra";
 import { HerdStats, PrivacyBadge } from "@/components/zebra";
+import { OrderConfirmationModal, MatchNotificationModal } from "@/components/modals";
+import { ZebraLoaderDots } from "@/components/zebra";
+import { useWallet } from "@/hooks/use-wallet";
+import { useDarkPool } from "@/hooks/use-dark-pool";
+import { useBackend } from "@/hooks/use-backend";
+import { useOrderStatus } from "@/hooks/use-order-status";
+import { useWalletStore } from "@/lib/stores/wallet-store";
+import { useSuiClient } from "@mysten/dapp-kit";
 
-// Mock data
-const MARKETS = [
-  { pair: "SUI/USDC", price: "$1.23", change: "+2.4%" },
-  { pair: "ETH/USDC", price: "$1,845.00", change: "-0.8%" },
-  { pair: "BTC/USDC", price: "$43,250.00", change: "+1.2%" },
-];
-
-const ACTIVE_ORDERS = [
-  {
-    id: "1",
-    commitment: "0xAB12...4567",
-    pair: "SUI/USDC",
-    status: "HIDDEN",
-    time: "2M AGO",
-  },
-  {
-    id: "2",
-    commitment: "0xCD34...8901",
-    pair: "SUI/USDC",
-    status: "MATCHED",
-    time: "15M AGO",
-  },
-];
-
-const RECENT_FILLS = [
-  {
-    id: "1",
-    time: "2H AGO",
-    side: "BUY",
-    pair: "SUI/USDC",
-    amount: "1,000 SUI",
-    price: "$1.22",
-  },
-  {
-    id: "2",
-    time: "1D AGO",
-    side: "SELL",
-    pair: "SUI/USDC",
-    amount: "500 SUI",
-    price: "$1.25",
-  },
-];
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "JUST NOW";
+  if (mins < 60) return `${mins}M AGO`;
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return `${hrs}H AGO`;
+  return `${Math.floor(hrs / 24)}D AGO`;
+}
 
 export default function TradePage() {
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
-  const [selectedMarket, setSelectedMarket] = useState("SUI/USDC");
+  const [expiry, setExpiry] = useState("24h");
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [isProving, setIsProving] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  const { address, isConnected } = useWallet();
+  const { balance } = useWalletStore();
+  const { submitOrder, cancelOrder, isSubmitting, orders } = useDarkPool();
+  const { matches, teeMetrics, midPrice: midPriceQuery } = useBackend();
+  const { latestMatch, showMatchModal, setShowMatchModal } = useOrderStatus();
+  const suiClient = useSuiClient();
+
+  const midPriceValue = midPriceQuery.data?.midPrice;
+
+  const activeOrders = orders.filter(
+    (o) => o.status === "pending" || o.status === "matched"
+  );
+
+  const settledMatches = matches.data?.filter((m) => m.settled) || [];
+
+  const expiryToSeconds: Record<string, number> = {
+    "1h": 3600,
+    "6h": 21600,
+    "24h": 86400,
+    "7d": 604800,
+  };
+
+  const expiryLabels: Record<string, string> = {
+    "1h": "1 HOUR",
+    "6h": "6 HOURS",
+    "24h": "24 HOURS",
+    "7d": "7 DAYS",
+  };
+
+  const handleSubmit = useCallback(() => {
+    setSubmitError(null);
+    if (!isConnected) {
+      setSubmitError("CONNECT YOUR WALLET FIRST");
+      return;
+    }
+    if (!amount || parseFloat(amount) <= 0) {
+      setSubmitError("ENTER A VALID AMOUNT");
+      return;
+    }
+    if (!price || parseFloat(price) <= 0) {
+      setSubmitError("ENTER A VALID PRICE");
+      return;
+    }
+    setShowConfirmModal(true);
+  }, [isConnected, amount, price]);
+
+  const handleConfirmOrder = useCallback(async () => {
+    setShowConfirmModal(false);
+    setSubmitError(null);
+    setIsProving(true);
+
+    try {
+      // Convert to MIST (1 SUI = 1e9 MIST)
+      const amountMist = BigInt(Math.floor(parseFloat(amount) * 1e9));
+      const priceMist = BigInt(Math.floor(parseFloat(price) * 1e9));
+      const expiryTime = BigInt(
+        Math.floor(Date.now() / 1000) + expiryToSeconds[expiry]
+      );
+
+      // Select a coin object
+      const coins = await suiClient.getCoins({
+        owner: address!,
+        coinType: "0x2::sui::SUI",
+      });
+
+      // Find a coin with enough balance (need amount for locking + some for gas)
+      const neededAmount = amountMist;
+      let selectedCoin = coins.data.find(
+        (c) => BigInt(c.balance) >= neededAmount
+      );
+
+      if (!selectedCoin) {
+        throw new Error(
+          `INSUFFICIENT BALANCE. NEED ${amount} SUI BUT NO COIN OBJECT HAS ENOUGH.`
+        );
+      }
+
+      const order = await submitOrder({
+        side: side.toLowerCase() as "buy" | "sell",
+        amount: amountMist,
+        price: priceMist,
+        expiry: expiryTime,
+        coinObjectId: selectedCoin.coinObjectId,
+      });
+
+      if (order) {
+        setSubmitSuccess(true);
+        setAmount("");
+        setPrice("");
+        setTimeout(() => setSubmitSuccess(false), 3000);
+      }
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "ORDER SUBMISSION FAILED";
+      setSubmitError(message);
+    } finally {
+      setIsProving(false);
+    }
+  }, [amount, price, side, expiry, address, suiClient, submitOrder]);
+
+  const handleCancel = useCallback(
+    async (commitment: string, orderSide: string) => {
+      await cancelOrder(commitment, orderSide === "buy");
+    },
+    [cancelOrder]
+  );
+
+  const orderValue = (
+    parseFloat(amount || "0") * parseFloat(price || "0")
+  ).toFixed(4);
 
   return (
     <div className="min-h-screen bg-background">
-      {/* HEADER */}
-      <header className="border-b border-border">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="text-sm tracking-widest">
-            ZEBRA
-          </Link>
-
-          <div className="flex items-center gap-6">
-            <PrivacyBadge status="hidden" />
-            <Button>0X1234...5678</Button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="container mx-auto px-6 py-8">
-        {/* MARKETS BAR */}
-        <div className="flex items-center gap-8 mb-8 pb-4 border-b border-border overflow-x-auto">
-          {MARKETS.map((market) => (
-            <button
-              key={market.pair}
-              onClick={() => setSelectedMarket(market.pair)}
-              className={`flex items-center gap-4 text-xs tracking-wide whitespace-nowrap transition-opacity hover:opacity-60 ${
-                selectedMarket === market.pair
-                  ? "opacity-100"
-                  : "opacity-40"
-              }`}
-            >
-              <span>{market.pair}</span>
-              <span className="font-mono">{market.price}</span>
-              <span className="text-muted-foreground">{market.change}</span>
-            </button>
-          ))}
+        {/* MARKET INFO BAR */}
+        <div className="flex items-center gap-8 mb-8 pb-4 border-b border-border">
+          <div className="flex items-center gap-4 text-xs tracking-wide">
+            <span className="opacity-100">SUI/SUI</span>
+            <span className="font-mono text-muted-foreground">
+              {midPriceValue ? `${midPriceValue}` : "—"}
+            </span>
+            <span className="text-[10px] text-muted-foreground">
+              DEEPBOOK REF PRICE
+            </span>
+          </div>
+          <div className="ml-auto">
+            <PrivacyBadge status="hidden" />
+          </div>
         </div>
 
         {/* BALANCE STRIP */}
         <div className="flex items-center justify-between mb-8 py-4 border-y border-border">
           <div className="flex items-center gap-8">
             <div>
-              <span className="text-xs tracking-widest text-muted-foreground">USDC</span>
-              <span className="font-mono text-sm ml-4">$50,000.00</span>
-            </div>
-            <div>
-              <span className="text-xs tracking-widest text-muted-foreground">SUI</span>
-              <span className="font-mono text-sm ml-4">25,000.00</span>
+              <span className="text-xs tracking-widest text-muted-foreground">
+                AVAILABLE
+              </span>
+              <span className="font-mono text-sm ml-4">
+                {isConnected ? `${balance.sui} SUI` : "—"}
+              </span>
             </div>
           </div>
-          <div className="flex items-center gap-4">
-            <Link href="/deposit">
-              <Button>DEPOSIT</Button>
-            </Link>
-            <Button>WITHDRAW</Button>
-          </div>
+          {isConnected && (
+            <span className="text-[10px] tracking-wide text-muted-foreground">
+              TESTNET
+            </span>
+          )}
         </div>
 
         {/* TRADING GRID */}
@@ -141,21 +214,12 @@ export default function TradePage() {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* PAIR */}
+              {/* PAIR (locked) */}
               <div className="space-y-2">
                 <Label>PAIR</Label>
-                <Select value={selectedMarket} onValueChange={setSelectedMarket}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {MARKETS.map((m) => (
-                      <SelectItem key={m.pair} value={m.pair}>
-                        {m.pair}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="text-xs tracking-widest border border-border p-3 text-muted-foreground">
+                  SUI / SUI (TESTNET)
+                </div>
               </div>
 
               {/* SIDE */}
@@ -183,7 +247,7 @@ export default function TradePage() {
 
               {/* AMOUNT */}
               <div className="space-y-2">
-                <Label>AMOUNT</Label>
+                <Label>AMOUNT (SUI)</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -191,16 +255,18 @@ export default function TradePage() {
                     value={amount}
                     onChange={(e) => setAmount(e.target.value)}
                     className="flex-1"
+                    min="0"
+                    step="0.01"
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
-                    {selectedMarket.split("/")[0]}
+                    SUI
                   </span>
                 </div>
               </div>
 
               {/* PRICE */}
               <div className="space-y-2">
-                <Label>LIMIT PRICE</Label>
+                <Label>LIMIT PRICE (SUI)</Label>
                 <div className="flex items-center gap-2">
                   <Input
                     type="number"
@@ -208,9 +274,11 @@ export default function TradePage() {
                     value={price}
                     onChange={(e) => setPrice(e.target.value)}
                     className="flex-1"
+                    min="0"
+                    step="0.01"
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
-                    {selectedMarket.split("/")[1]}
+                    SUI
                   </span>
                 </div>
               </div>
@@ -218,7 +286,7 @@ export default function TradePage() {
               {/* EXPIRY */}
               <div className="space-y-2">
                 <Label>EXPIRY</Label>
-                <Select defaultValue="24h">
+                <Select value={expiry} onValueChange={setExpiry}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -234,25 +302,58 @@ export default function TradePage() {
               {/* ORDER VALUE */}
               <div className="py-4 border-t border-border">
                 <div className="flex justify-between text-xs">
-                  <span className="tracking-widest text-muted-foreground">ORDER VALUE</span>
-                  <span className="font-mono">
-                    ${(parseFloat(amount || "0") * parseFloat(price || "0")).toLocaleString()}
+                  <span className="tracking-widest text-muted-foreground">
+                    ORDER VALUE
                   </span>
+                  <span className="font-mono">{orderValue} SUI</span>
                 </div>
               </div>
 
+              {/* ERROR / SUCCESS */}
+              {submitError && (
+                <div className="text-[10px] tracking-wide text-red-500 border border-red-500/20 p-3">
+                  {submitError}
+                </div>
+              )}
+              {submitSuccess && (
+                <div className="text-[10px] tracking-wide text-green-500 border border-green-500/20 p-3">
+                  ORDER SUBMITTED SUCCESSFULLY. ZK PROOF VERIFIED ON-CHAIN.
+                </div>
+              )}
+
               {/* SUBMIT */}
-              <Button className="w-full" size="lg">
-                HIDE IN THE HERD
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleSubmit}
+                disabled={isSubmitting || isProving}
+              >
+                {isProving ? (
+                  <span className="flex items-center gap-2">
+                    GENERATING ZK PROOF <ZebraLoaderDots />
+                  </span>
+                ) : isSubmitting ? (
+                  <span className="flex items-center gap-2">
+                    SUBMITTING <ZebraLoaderDots />
+                  </span>
+                ) : !isConnected ? (
+                  "CONNECT WALLET"
+                ) : (
+                  "HIDE IN THE HERD"
+                )}
               </Button>
             </div>
           </div>
 
           {/* HERD STATS */}
           <HerdStats
-            orderCount={127}
-            volume24h="$4,200,000"
-            spread="~0.1%"
+            orderCount={teeMetrics.data?.metrics.ordersReceived || 0}
+            volume24h={
+              teeMetrics.data
+                ? `${(teeMetrics.data.metrics.totalVolumeSettled / 1e9).toFixed(2)} SUI`
+                : "—"
+            }
+            spread={midPriceValue ? "~0.1%" : "N/A"}
           />
         </div>
 
@@ -270,32 +371,68 @@ export default function TradePage() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>COMMITMENT</TableHead>
-                      <TableHead>PAIR</TableHead>
+                      <TableHead>SIDE</TableHead>
                       <TableHead>STATUS</TableHead>
                       <TableHead>TIME</TableHead>
                       <TableHead>ACTION</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {ACTIVE_ORDERS.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-mono">{order.commitment}</TableCell>
-                        <TableCell>{order.pair}</TableCell>
-                        <TableCell>
-                          <Badge variant={order.status === "MATCHED" ? "buy" : "hidden"}>
-                            {order.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-muted-foreground">{order.time}</TableCell>
-                        <TableCell>
-                          {order.status === "MATCHED" ? (
-                            <Button size="sm">REVEAL</Button>
-                          ) : (
-                            <Button size="sm">CANCEL</Button>
-                          )}
+                    {activeOrders.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center py-8 text-muted-foreground text-xs tracking-widest"
+                        >
+                          NO ACTIVE ORDERS
                         </TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      activeOrders.map((order) => (
+                        <TableRow key={order.id}>
+                          <TableCell className="font-mono text-xs">
+                            {order.commitment.slice(0, 10)}...
+                            {order.commitment.slice(-4)}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                order.side === "buy" ? "buy" : "sell"
+                              }
+                            >
+                              {order.side.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={
+                                order.status === "matched"
+                                  ? "buy"
+                                  : "hidden"
+                              }
+                            >
+                              {order.status.toUpperCase()}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            {timeAgo(order.createdAt)}
+                          </TableCell>
+                          <TableCell>
+                            {order.status === "pending" && (
+                              <Button
+                                size="sm"
+                                onClick={() =>
+                                  handleCancel(order.commitment, order.side)
+                                }
+                                disabled={isSubmitting}
+                              >
+                                CANCEL
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -306,27 +443,53 @@ export default function TradePage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>BUYER</TableHead>
+                      <TableHead>SELLER</TableHead>
+                      <TableHead>SETTLED</TableHead>
                       <TableHead>TIME</TableHead>
-                      <TableHead>SIDE</TableHead>
-                      <TableHead>PAIR</TableHead>
-                      <TableHead>AMOUNT</TableHead>
-                      <TableHead>PRICE</TableHead>
+                      <TableHead>TX</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {RECENT_FILLS.map((fill) => (
-                      <TableRow key={fill.id}>
-                        <TableCell className="text-muted-foreground">{fill.time}</TableCell>
-                        <TableCell>
-                          <Badge variant={fill.side === "BUY" ? "buy" : "sell"}>
-                            {fill.side}
-                          </Badge>
+                    {settledMatches.length === 0 ? (
+                      <TableRow>
+                        <TableCell
+                          colSpan={5}
+                          className="text-center py-8 text-muted-foreground text-xs tracking-widest"
+                        >
+                          NO RECENT FILLS
                         </TableCell>
-                        <TableCell>{fill.pair}</TableCell>
-                        <TableCell className="font-mono">{fill.amount}</TableCell>
-                        <TableCell className="font-mono">{fill.price}</TableCell>
                       </TableRow>
-                    ))}
+                    ) : (
+                      settledMatches.map((match, i) => (
+                        <TableRow key={i}>
+                          <TableCell className="font-mono text-xs">
+                            {match.buyerCommitmentPrefix}
+                          </TableCell>
+                          <TableCell className="font-mono text-xs">
+                            {match.sellerCommitmentPrefix}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="secondary">SETTLED</Badge>
+                          </TableCell>
+                          <TableCell className="text-muted-foreground text-xs">
+                            {timeAgo(match.timestamp)}
+                          </TableCell>
+                          <TableCell>
+                            {match.settlementDigest && (
+                              <a
+                                href={`https://suiscan.xyz/testnet/tx/${match.settlementDigest}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-xs tracking-widest hover:opacity-60"
+                              >
+                                [VIEW]
+                              </a>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
                   </TableBody>
                 </Table>
               </div>
@@ -334,7 +497,47 @@ export default function TradePage() {
           </Tabs>
         </div>
       </main>
+
+      {/* ORDER CONFIRMATION MODAL */}
+      <OrderConfirmationModal
+        open={showConfirmModal}
+        onOpenChange={setShowConfirmModal}
+        order={{
+          side: side,
+          amount: amount,
+          token: "SUI",
+          price: `${price} SUI`,
+          total: `${orderValue} SUI`,
+          expiry: expiryLabels[expiry],
+        }}
+        onConfirm={handleConfirmOrder}
+      />
+
+      {/* MATCH NOTIFICATION MODAL */}
+      {latestMatch && (
+        <MatchNotificationModal
+          open={showMatchModal}
+          onOpenChange={setShowMatchModal}
+          match={{
+            yourOrder: { side: "—", amount: "—", price: "—" },
+            matchedWith: { side: "—", amount: "—", price: "—" },
+            executionPrice: "HIDDEN",
+            via: "TEE MATCHER",
+            settlement: latestMatch.settled ? "COMPLETE" : "PENDING",
+            progress: latestMatch.settled ? 100 : 50,
+            status: latestMatch.settled ? "SETTLED" : "MATCHING",
+          }}
+          onViewTransaction={() => {
+            if (latestMatch.settlementDigest) {
+              window.open(
+                `https://suiscan.xyz/testnet/tx/${latestMatch.settlementDigest}`,
+                "_blank"
+              );
+            }
+            setShowMatchModal(false);
+          }}
+        />
+      )}
     </div>
   );
 }
-
