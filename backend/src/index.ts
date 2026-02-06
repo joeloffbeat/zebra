@@ -188,13 +188,26 @@ app.get('/flash-loan/pools', async (req, res) => {
 
 // ── TEE metrics & attestation endpoints ──────────────────────────────
 app.get('/tee/metrics', async (req, res) => {
-  const metrics = teeService.getMetrics();
+  const m = teeService.getMetrics();
   const oyster = await teeService.fetchOysterAttestation();
   const orderCounts = orderBook.getOrderCount();
+  // Shape response to match frontend TeeMetrics interface
   res.json({
-    ...metrics,
-    oysterAttestation: oyster,
+    teeMode: m.mode,
+    publicKey: m.publicKey,
+    matcherAddress: settlement.getMatcherAddress(),
+    uptime: m.uptime,
+    metrics: {
+      ordersReceived: m.ordersReceived,
+      ordersDecrypted: m.ordersDecrypted,
+      decryptionFailures: m.decryptionFailures,
+      matchesFound: m.matchesFound,
+      settlementsExecuted: m.settlementsExecuted,
+      totalVolumeSettled: Number(m.totalVolumeSettled),
+      flashLoansExecuted: m.flashLoansExecuted,
+    },
     orderBook: orderCounts,
+    oysterAttestation: oyster,
   });
 });
 
