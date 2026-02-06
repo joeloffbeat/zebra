@@ -22,10 +22,11 @@ async function postBackend(path: string, body?: Record<string, unknown>) {
 
 export interface BackendStatus {
   status: string;
+  timestamp: number;
+  tee: { mode: string; publicKey: string; attestationCount: number };
   matcherAddress: string;
-  teeMode: string;
-  uptime: number;
   orderBook: { bids: number; asks: number; pendingDecryption: number };
+  recentMatches: number;
 }
 
 export interface BackendOrder {

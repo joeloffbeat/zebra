@@ -9,8 +9,8 @@ export const suiClient = new SuiJsonRpcClient({
 });
 
 export const CONTRACTS = {
-  DARK_POOL_PACKAGE: process.env.NEXT_PUBLIC_DARK_POOL_PACKAGE || '0x9e4fc5a3129441e3a964bdbf2776ec332a375a46d1a0bac624731abbf7874ebf',
-  DARK_POOL_OBJECT: process.env.NEXT_PUBLIC_DARK_POOL_OBJECT || '0x7934c4fd0158a853a81313d9a6a0573a1b3d041dd6a2ae17b3487472d0f70374',
+  DARK_POOL_PACKAGE: process.env.NEXT_PUBLIC_DARK_POOL_PACKAGE || '0x3c6a4a56672936382afbfa4c74d21373f25eefaa38b4b809c69fb9488a6b2417',
+  DARK_POOL_OBJECT: process.env.NEXT_PUBLIC_DARK_POOL_OBJECT || '0x96ff4e93a6737673e712caa4f3e3df437a6ed5c83d1e74bf180dac84fdb6012e',
 };
 
 export function setContractAddresses(packageId: string, poolObjectId: string) {

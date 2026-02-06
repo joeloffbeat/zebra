@@ -22,7 +22,7 @@ export async function submitHiddenOrder(
   const nonce = BigInt(Date.now());
 
   const currentTime = BigInt(Math.floor(Date.now() / 1000));
-  const poolId = BigInt(CONTRACTS.DARK_POOL_OBJECT.slice(2) || '1');
+  const poolId = 1n;
 
   // Generate ZK proof
   const proofResult = await generateOrderProof({
@@ -56,6 +56,7 @@ export async function submitHiddenOrder(
 
   // Build transaction — unified submit_order, single type arg, splitCoins for locking
   const tx = new Transaction();
+  tx.setGasBudget(10_000_000);
 
   const vecU8 = bcs.vector(bcs.u8());
 
@@ -101,6 +102,7 @@ export async function cancelOrder(
   signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> }
 ): Promise<string> {
   const tx = new Transaction();
+  tx.setGasBudget(10_000_000);
 
   const vecU8 = bcs.vector(bcs.u8());
 
