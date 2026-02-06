@@ -4,8 +4,8 @@ import { secp256k1 } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
 
 export interface SettlementAttestation {
-  buyerCommitment: string;
-  sellerCommitment: string;
+  commitmentA: string;
+  commitmentB: string;
   executionPrice: string;
   executionAmount: string;
   timestamp: number;
@@ -14,8 +14,8 @@ export interface SettlementAttestation {
 }
 
 export interface RedactedAttestation {
-  buyerCommitmentPrefix: string;
-  sellerCommitmentPrefix: string;
+  commitmentAPrefix: string;
+  commitmentBPrefix: string;
   timestamp: number;
   signature: string;
   publicKey: string;
@@ -162,8 +162,8 @@ export class TeeAttestationService {
   // ── Attestation signing ────────────────────────────────────────────
 
   signSettlementAttestation(
-    buyerCommitment: string,
-    sellerCommitment: string,
+    commitmentA: string,
+    commitmentB: string,
     executionPrice: string,
     executionAmount: string,
   ): SettlementAttestation {
@@ -172,13 +172,13 @@ export class TeeAttestationService {
     }
 
     const timestamp = Date.now();
-    const message = `${buyerCommitment}:${sellerCommitment}:${executionPrice}:${executionAmount}:${timestamp}`;
+    const message = `${commitmentA}:${commitmentB}:${executionPrice}:${executionAmount}:${timestamp}`;
     const messageHash = sha256(new TextEncoder().encode(message));
     const signature = secp256k1.sign(messageHash, this.privateKey);
 
     const attestation: SettlementAttestation = {
-      buyerCommitment,
-      sellerCommitment,
+      commitmentA,
+      commitmentB,
       executionPrice,
       executionAmount,
       timestamp,
@@ -189,9 +189,9 @@ export class TeeAttestationService {
     this.attestations.push(attestation);
 
     console.log('TEE Settlement Attestation:');
-    console.log(`  Buyer:  ${buyerCommitment.slice(0, 16)}...`);
-    console.log(`  Seller: ${sellerCommitment.slice(0, 16)}...`);
-    console.log(`  Sig:    ${signature.toCompactHex().slice(0, 32)}...`);
+    console.log(`  A: ${commitmentA.slice(0, 16)}...`);
+    console.log(`  B: ${commitmentB.slice(0, 16)}...`);
+    console.log(`  Sig: ${signature.toCompactHex().slice(0, 32)}...`);
 
     return attestation;
   }
@@ -216,8 +216,8 @@ export class TeeAttestationService {
   /** Redacted attestations — safe for public endpoints. */
   getRedactedAttestations(count: number = 10): RedactedAttestation[] {
     return this.attestations.slice(-count).map(a => ({
-      buyerCommitmentPrefix: a.buyerCommitment.slice(0, 16) + '...',
-      sellerCommitmentPrefix: a.sellerCommitment.slice(0, 16) + '...',
+      commitmentAPrefix: a.commitmentA.slice(0, 16) + '...',
+      commitmentBPrefix: a.commitmentB.slice(0, 16) + '...',
       timestamp: a.timestamp,
       signature: a.signature,
       publicKey: a.publicKey,

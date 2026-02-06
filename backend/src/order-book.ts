@@ -4,6 +4,7 @@ export interface DecryptedOrderInfo extends CommittedOrder {
   decryptedPrice: bigint;
   decryptedAmount: bigint;
   decryptedSide: number; // 0 = sell, 1 = buy
+  decryptedLockedAmount: bigint;
 }
 
 export class OrderBook {

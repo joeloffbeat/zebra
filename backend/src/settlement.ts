@@ -45,21 +45,30 @@ export class SettlementService {
       tx.setGasBudget(10_000_000);
 
       // Convert commitment strings to byte vectors
-      const buyerCommitmentBytes = this.hexStringToBytes(match.buyer.commitment);
-      const sellerCommitmentBytes = this.hexStringToBytes(match.seller.commitment);
+      const commitmentABytes = this.hexStringToBytes(match.buyer.commitment);
+      const commitmentBBytes = this.hexStringToBytes(match.seller.commitment);
+
+      // Calculate payouts (TEE computes, contract enforces solvency)
+      const quoteCost = match.executionAmount * match.executionPrice / 1_000_000_000n;
+      const buyerLocked = match.buyer.decryptedLockedAmount;
+      const sellerLocked = match.seller.decryptedLockedAmount;
+
+      // Buyer gets: executionAmount (base tokens bought) + refund of excess locked quote
+      // Seller gets: quoteCost (payment) + refund of excess locked base
+      const payoutBuyer = match.executionAmount + (buyerLocked > quoteCost ? buyerLocked - quoteCost : 0n);
+      const payoutSeller = quoteCost + (sellerLocked > match.executionAmount ? sellerLocked - match.executionAmount : 0n);
 
       tx.moveCall({
         target: `${config.darkPoolPackage}::dark_pool::settle_match`,
         arguments: [
           tx.object(config.darkPoolObject),                                           // pool
           tx.object(config.matcherCapId),                                             // matcher_cap
-          tx.pure(bcs.vector(bcs.u8()).serialize(buyerCommitmentBytes)),               // buyer_commitment
-          tx.pure(bcs.vector(bcs.u8()).serialize(sellerCommitmentBytes)),              // seller_commitment
-          tx.pure(bcs.u64().serialize(match.executionAmount)),                           // exec_amount
-          tx.pure(bcs.u64().serialize(match.executionPrice)),                           // exec_price
+          tx.pure(bcs.vector(bcs.u8()).serialize(commitmentABytes)),                  // commitment_a
+          tx.pure(bcs.vector(bcs.u8()).serialize(commitmentBBytes)),                  // commitment_b
+          tx.pure(bcs.u64().serialize(payoutBuyer)),                                  // payout_a
+          tx.pure(bcs.u64().serialize(payoutSeller)),                                 // payout_b
         ],
         typeArguments: [
-          '0x2::sui::SUI',
           '0x2::sui::SUI',
         ],
       });
@@ -77,7 +86,7 @@ export class SettlementService {
         return null;
       }
 
-      console.log(`Settlement executed: ${result.digest} | buyer=${match.buyer.commitment.slice(0, 16)}... seller=${match.seller.commitment.slice(0, 16)}...`);
+      console.log(`Settlement executed: ${result.digest} | a=${match.buyer.commitment.slice(0, 16)}... b=${match.seller.commitment.slice(0, 16)}...`);
 
       // Sign TEE attestation after successful settlement
       if (this.teeService) {
@@ -105,4 +114,3 @@ export class SettlementService {
     return bytes;
   }
 }
-

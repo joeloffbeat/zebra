@@ -2,12 +2,10 @@ import { SuiJsonRpcClient, SuiEventFilter, SuiEvent } from '@mysten/sui/jsonRpc'
 import { EventEmitter } from 'events';
 import { config } from './config.js';
 
+// Privacy-stripped event — no isBid, no lockedAmount, no owner, no nullifier
 export interface CommittedOrder {
   commitment: string;
-  nullifier: string;
-  owner: string;
-  isBid: boolean;
-  lockedAmount: bigint;
+  owner: string;        // from on-chain tx sender, NOT from event
   timestamp: number;
   poolId: string;
   encryptedData: Uint8Array;
@@ -68,11 +66,9 @@ export class SuiEventListener extends EventEmitter {
         order: 'descending',
       });
       if (result.data.length > 0 && result.nextCursor) {
-        // The descending query's nextCursor points BEFORE the most recent event.
-        // We want to skip ALL existing events, so use the event's own id as cursor.
         const latest = result.data[0];
         this.lastCursor = { txDigest: latest.id.txDigest, eventSeq: latest.id.eventSeq };
-        console.log(`Skipped ${result.data.length > 0 ? 'past' : 'no'} historical events (cursor: ${this.lastCursor.txDigest.slice(0, 12)}...)`);
+        console.log(`Skipped past historical events (cursor: ${this.lastCursor.txDigest.slice(0, 12)}...)`);
       } else {
         console.log('No historical events found, starting from beginning.');
       }
@@ -105,19 +101,17 @@ export class SuiEventListener extends EventEmitter {
           encryptedData = new Uint8Array(data.encrypted_data);
         }
 
-        // Convert vector<u8> fields to hex strings (Sui RPC returns them as number arrays)
+        // New privacy-preserving event: only commitment, encrypted_data, timestamp
+        // Owner comes from the transaction sender, queried separately if needed
         const order: CommittedOrder = {
           commitment: toHexString(data.commitment),
-          nullifier: toHexString(data.nullifier),
-          owner: data.owner,
-          isBid: data.is_bid,
-          lockedAmount: BigInt(data.locked_amount),
+          owner: event.sender || '',  // tx sender, not in event fields
           timestamp: data.timestamp,
           poolId: toHexString(data.pool_id),
           encryptedData,
         };
         this.emit('orderCommitted', order);
-        console.log(`Order committed: ${order.isBid ? 'BID' : 'ASK'} | locked=${order.lockedAmount} | ${order.commitment.slice(0, 16)}...`);
+        console.log(`Order committed: ${order.commitment.slice(0, 16)}...`);
       }
 
       // Update cursor if there are results

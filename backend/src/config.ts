@@ -16,9 +16,9 @@ export const config = {
   darkPoolPackage: process.env.DARK_POOL_PACKAGE || '',
   darkPoolObject: process.env.DARK_POOL_OBJECT || '',
   matcherCapId: process.env.MATCHER_CAP_ID || '',
+  sealPackageId: process.env.SEAL_PACKAGE_ID || '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82',
   sealAllowlistId: process.env.SEAL_ALLOWLIST_ID || '',
   port: parseInt(process.env.PORT || '3001'),
   teeMode: process.env.TEE_MODE || 'local-dev',
   enclaveKeyPath: process.env.ENCLAVE_KEY_PATH || '/app/ecdsa.sec',
 };
-

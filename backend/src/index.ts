@@ -12,9 +12,6 @@ import { FlashLoanService } from './flash-loan-service.js';
 const app = express();
 app.use(express.json());
 
-// Determine if Seal encryption is configured
-const sealConfigured = !!config.sealAllowlistId;
-
 // Initialize components
 const listener = new SuiEventListener();
 const orderBook = new OrderBook();
@@ -66,55 +63,37 @@ function scheduleMatch() {
   }
 }
 
-// Handle new orders
+// Handle new orders — Seal decryption is MANDATORY (no demo mode)
 listener.on('orderCommitted', async (order: CommittedOrder) => {
   teeService.incrementOrdersReceived();
 
-  let decryptedPrice = 0n;
-  let decryptedAmount = 0n;
-  let decryptedSide = order.isBid ? 1 : 0;
-
-  if (order.encryptedData.length > 0 && sealConfigured) {
-    // Production mode: Seal is configured, try to decrypt
-    const decrypted = await sealService.decryptOrderData(order.encryptedData);
-    if (decrypted) {
-      decryptedPrice = decrypted.price;
-      decryptedAmount = decrypted.amount;
-      decryptedSide = decrypted.side;
-      teeService.incrementOrdersDecrypted();
-      console.log(`Decrypted order: ${order.commitment.slice(0, 16)}... | side=${decryptedSide}`);
-    } else {
-      // Seal decryption failed — queue for retry
-      teeService.incrementDecryptionFailures();
-      console.log(`Seal decryption failed for ${order.commitment.slice(0, 16)}..., queuing for retry`);
-      orderBook.addPendingOrder(order);
-      return;
-    }
-  } else if (!sealConfigured) {
-    // Demo mode: Seal NOT configured — use on-chain data for matching
-    // WARNING: This is NOT private — only for testing/demo
-    decryptedPrice = order.lockedAmount;
-    decryptedAmount = order.lockedAmount;
-    decryptedSide = order.isBid ? 1 : 0;
-    teeService.incrementOrdersDecrypted();
-    console.log(`[DEMO MODE] Order from on-chain data: ${order.commitment.slice(0, 16)}... | side=${decryptedSide}`);
-  } else {
-    // Seal configured but no encrypted data — queue
+  if (order.encryptedData.length === 0) {
     teeService.incrementDecryptionFailures();
     console.log(`No encrypted data for ${order.commitment.slice(0, 16)}..., queuing for retry`);
     orderBook.addPendingOrder(order);
     return;
   }
 
-  const enrichedOrder: DecryptedOrderInfo = {
-    ...order,
-    decryptedPrice,
-    decryptedAmount,
-    decryptedSide,
-  };
+  const decrypted = await sealService.decryptOrderData(order.encryptedData);
+  if (decrypted) {
+    teeService.incrementOrdersDecrypted();
+    console.log(`Decrypted order: ${order.commitment.slice(0, 16)}... | side=${decrypted.side}`);
 
-  orderBook.addOrder(enrichedOrder);
-  scheduleMatch();
+    const enrichedOrder: DecryptedOrderInfo = {
+      ...order,
+      decryptedPrice: decrypted.price,
+      decryptedAmount: decrypted.amount,
+      decryptedSide: decrypted.side,
+      decryptedLockedAmount: decrypted.amount, // use decrypted amount as locked
+    };
+
+    orderBook.addOrder(enrichedOrder);
+    scheduleMatch();
+  } else {
+    teeService.incrementDecryptionFailures();
+    console.log(`Seal decryption failed for ${order.commitment.slice(0, 16)}..., queuing for retry`);
+    orderBook.addPendingOrder(order);
+  }
 });
 
 // ── REST API endpoints ───────────────────────────────────────────────
@@ -129,7 +108,6 @@ app.get('/status', (req, res) => {
   res.json({
     status: 'ok',
     timestamp: Date.now(),
-    sealConfigured,
     tee: {
       mode: teeInfo.mode,
       publicKey: teeInfo.publicKey,
@@ -160,15 +138,11 @@ app.get('/orders', (req, res) => {
     counts,
     bids: orderBook.getBids().map(o => ({
       commitmentPrefix: o.commitment.slice(0, 16) + '...',
-      owner: o.owner,
       timestamp: o.timestamp,
-      side: 'bid',
     })),
     asks: orderBook.getAsks().map(o => ({
       commitmentPrefix: o.commitment.slice(0, 16) + '...',
-      owner: o.owner,
       timestamp: o.timestamp,
-      side: 'ask',
     })),
   });
 });
@@ -177,8 +151,8 @@ app.get('/orders', (req, res) => {
 app.get('/matches', (req, res) => {
   res.json({
     matches: matcher.getRecentMatches().map(m => ({
-      buyerCommitmentPrefix: m.buyer.commitment.slice(0, 16) + '...',
-      sellerCommitmentPrefix: m.seller.commitment.slice(0, 16) + '...',
+      commitmentAPrefix: m.buyer.commitment.slice(0, 16) + '...',
+      commitmentBPrefix: m.seller.commitment.slice(0, 16) + '...',
       timestamp: m.timestamp,
       settled: !!m.settlementDigest,
       settlementDigest: m.settlementDigest ?? null,
@@ -214,7 +188,6 @@ app.get('/tee/metrics', async (req, res) => {
   const orderCounts = orderBook.getOrderCount();
   res.json({
     ...metrics,
-    sealConfigured,
     oysterAttestation: oyster,
     orderBook: orderCounts,
   });
@@ -240,11 +213,14 @@ app.listen(config.port, async () => {
   console.log(`Zebra Matching Engine running on port ${config.port}`);
   console.log(`TEE mode: ${teeService.getMode()}`);
   console.log(`TEE public key: ${teeService.getPublicKeyHex()}`);
-  if (!sealConfigured) {
-    console.warn('WARNING: SEAL_ALLOWLIST_ID not set — running in DEMO MODE (no order privacy)');
-  } else {
-    console.log('Seal encryption: enabled');
+
+  if (!config.sealAllowlistId) {
+    console.error('FATAL: SEAL_ALLOWLIST_ID not set — Seal encryption is mandatory');
+    console.error('Run: npx tsx scripts/setup-seal.ts');
+    process.exit(1);
   }
+  console.log('Seal encryption: enabled');
+
   console.log(`Sui RPC: ${config.suiRpcUrl}`);
   console.log(`Package: ${config.darkPoolPackage}`);
   console.log(`Pool: ${config.darkPoolObject}`);
@@ -260,4 +236,3 @@ process.on('SIGINT', () => {
   listener.stop();
   process.exit(0);
 });
-
