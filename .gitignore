@@ -5,6 +5,7 @@
 
 # AI tooling
 .claude/
+CLAUDE.md
 .agents/
 .mcp.json
 
