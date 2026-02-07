@@ -70,11 +70,16 @@ export default function TradePage() {
   const { isConnected } = useWallet();
   const { balance } = useWalletStore();
   const { submitOrder, cancelOrder, isSubmitting, orders } = useDarkPool();
-  const { matches, teeMetrics, midPrice: midPriceQuery } = useBackend();
+  const { matches, teeMetrics, midPrice: midPriceQuery, batchStatus } = useBackend();
   const { latestMatch, showMatchModal, setShowMatchModal } = useOrderStatus();
 
   const midPriceValue = midPriceQuery.data?.midPrice;
   const isMidPriceLoading = midPriceQuery.isLoading || midPriceQuery.isFetching;
+
+  const batch = batchStatus.data;
+  const batchCountdown = batch?.timeRemainingMs
+    ? Math.ceil(batch.timeRemainingMs / 1000)
+    : 0;
 
   // Auto-fill price when mid-price loads and order type is MARKET
   useEffect(() => {
@@ -193,6 +198,35 @@ export default function TradePage() {
             <PrivacyBadge status="hidden" />
           </div>
         </div>
+
+        {/* BATCH STATUS BAR */}
+        {batch && batch.status !== "idle" && (
+          <div className="flex items-center gap-4 mb-4 px-4 py-3 border border-border text-xs tracking-wide">
+            <span
+              className={`inline-block w-2 h-2 rounded-full ${
+                batch.status === "accumulating"
+                  ? "bg-yellow-500 animate-pulse"
+                  : "bg-blue-500 animate-pulse"
+              }`}
+            />
+            <span className="text-muted-foreground">
+              BATCH #{batch.batchId}
+            </span>
+            <span className="font-mono">
+              {batch.orderCount} ORDER{batch.orderCount !== 1 ? "S" : ""}
+            </span>
+            {batch.status === "accumulating" && batchCountdown > 0 && (
+              <span className="font-mono text-muted-foreground">
+                {batchCountdown}S
+              </span>
+            )}
+            <span className="ml-auto text-muted-foreground uppercase">
+              {batch.status === "accumulating"
+                ? "ACCUMULATING"
+                : "RESOLVING"}
+            </span>
+          </div>
+        )}
 
         {/* BALANCE STRIP */}
         <div className="flex items-center justify-between mb-8 py-4 border-y border-border">
@@ -360,7 +394,9 @@ export default function TradePage() {
               )}
               {submitSuccess && (
                 <div className="text-[10px] tracking-wide text-green-500 border border-green-500/20 p-3">
-                  ORDER SUBMITTED SUCCESSFULLY. ZK PROOF VERIFIED ON-CHAIN.
+                  {batch
+                    ? `ADDED TO BATCH #${batch.batchId}. ZK PROOF VERIFIED ON-CHAIN.`
+                    : "ORDER SUBMITTED SUCCESSFULLY. ZK PROOF VERIFIED ON-CHAIN."}
                 </div>
               )}
 
@@ -406,6 +442,7 @@ export default function TradePage() {
             <TabsList>
               <TabsTrigger value="active">ACTIVE ORDERS</TabsTrigger>
               <TabsTrigger value="fills">RECENT FILLS</TabsTrigger>
+              <TabsTrigger value="batch">BATCH INFO</TabsTrigger>
             </TabsList>
 
             <TabsContent value="active">
@@ -513,7 +550,11 @@ export default function TradePage() {
                             {match.commitmentBPrefix}
                           </TableCell>
                           <TableCell>
-                            <Badge variant="secondary">SETTLED</Badge>
+                            <Badge variant="secondary">
+                              {match.commitmentBPrefix.startsWith("deepbook:")
+                                ? "DEEPBOOK"
+                                : "SETTLED"}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-muted-foreground text-xs">
                             {timeAgo(match.timestamp)}
@@ -535,6 +576,65 @@ export default function TradePage() {
                     )}
                   </TableBody>
                 </Table>
+              </div>
+            </TabsContent>
+            <TabsContent value="batch">
+              <div className="border border-border p-6 space-y-4">
+                {batch?.lastResolution ? (
+                  <>
+                    <div className="text-xs tracking-widest text-muted-foreground mb-4">
+                      LAST RESOLUTION — BATCH #{batch.lastResolution.batchId}
+                    </div>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div>
+                        <div className="text-[10px] tracking-wide text-muted-foreground">
+                          TOTAL ORDERS
+                        </div>
+                        <div className="font-mono text-sm">
+                          {batch.lastResolution.totalOrders}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] tracking-wide text-muted-foreground">
+                          INTERNAL MATCHES
+                        </div>
+                        <div className="font-mono text-sm">
+                          {batch.lastResolution.internalMatches}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] tracking-wide text-muted-foreground">
+                          DEEPBOOK SETTLEMENTS
+                        </div>
+                        <div className="font-mono text-sm">
+                          {batch.lastResolution.deepBookSettlements}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-[10px] tracking-wide text-muted-foreground">
+                          CARRY-OVER BUYS
+                        </div>
+                        <div className="font-mono text-sm">
+                          {batch.lastResolution.carryOverBuys}
+                        </div>
+                      </div>
+                    </div>
+                    {batch.lastResolution.deepBookFailures > 0 && (
+                      <div className="text-[10px] tracking-wide text-yellow-500 border border-yellow-500/20 p-3 mt-4">
+                        {batch.lastResolution.deepBookFailures} DEEPBOOK
+                        SETTLEMENT(S) FAILED — ORDERS CARRIED TO NEXT BATCH
+                      </div>
+                    )}
+                    <div className="text-[10px] text-muted-foreground mt-2">
+                      RESOLVED{" "}
+                      {timeAgo(batch.lastResolution.timestamp)}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground text-xs tracking-widest">
+                    NO BATCH RESOLUTIONS YET
+                  </div>
+                )}
               </div>
             </TabsContent>
           </Tabs>

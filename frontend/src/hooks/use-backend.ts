@@ -41,6 +41,24 @@ export interface BackendMatch {
   settlementDigest?: string;
 }
 
+export interface BatchResolution {
+  batchId: number;
+  timestamp: number;
+  internalMatches: number;
+  deepBookSettlements: number;
+  deepBookFailures: number;
+  carryOverBuys: number;
+  totalOrders: number;
+}
+
+export interface BatchStatus {
+  batchId: number;
+  orderCount: number;
+  status: 'accumulating' | 'resolving' | 'idle';
+  timeRemainingMs: number;
+  lastResolution: BatchResolution | null;
+}
+
 export interface TeeMetrics {
   teeMode: string;
   publicKey: string;
@@ -117,6 +135,13 @@ export function useBackend() {
     retry: 1,
   });
 
+  const batchStatus = useQuery<BatchStatus>({
+    queryKey: ['batch-status'],
+    queryFn: () => fetchApi('/batch/status'),
+    refetchInterval: 1000, // 1s for countdown accuracy
+    retry: 1,
+  });
+
   const flashLoanDemo = useMutation({
     mutationFn: (params: { pool?: string; amount?: number }) =>
       postApi('/flash-loan/demo', params),
@@ -129,6 +154,7 @@ export function useBackend() {
     teeMetrics,
     teeAttestations,
     midPrice,
+    batchStatus,
     flashLoanDemo,
   };
 }

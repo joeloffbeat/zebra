@@ -30,6 +30,10 @@ export function useOrderStatus() {
           match.commitmentBPrefix === commitmentPrefix;
 
         if (isMatch) {
+          // DeepBook flash loan settlements have "deepbook:" prefix in commitmentB
+          // These skip the "matched" intermediate state — go straight to settled
+          const isDeepBookSettlement = match.commitmentBPrefix.startsWith('deepbook:');
+
           if (match.settled && orderStatus !== 'settled') {
             updateOrderStatus(order.commitment, 'settled');
 
@@ -38,7 +42,7 @@ export function useOrderStatus() {
               setLatestMatch(match);
               setShowMatchModal(true);
             }
-          } else if (!match.settled && order.status === 'pending') {
+          } else if (!match.settled && order.status === 'pending' && !isDeepBookSettlement) {
             updateOrderStatus(order.commitment, 'matched');
           }
         }
