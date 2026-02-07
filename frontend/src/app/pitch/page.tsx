@@ -696,11 +696,6 @@ export default function PitchPage() {
                 </h2>
               </FadeIn>
 
-              <FadeIn isVisible={isVisible} delay={300}>
-                <p className="text-[16px] tracking-wide opacity-60 leading-relaxed max-w-3xl">
-                  <EDesc text="SETTLEMENT REVEALS THE RECIPIENT. ZEBRA BREAKS THIS LINK ENTIRELY." />
-                </p>
-              </FadeIn>
             </div>
 
             {/* WITHOUT ZEBRA — simple linear link */}
@@ -791,11 +786,6 @@ export default function PitchPage() {
               </div>
             </FadeIn>
 
-            <FadeIn isVisible={isVisible} delay={800}>
-              <p className="text-[14px] tracking-wide opacity-50 leading-relaxed max-w-3xl">
-                <EDesc text="RECEIVERS AND SPLIT PERCENTAGES LIVE INSIDE THE SEAL-ENCRYPTED PAYLOAD. ONLY THE TEE KNOWS WHERE FUNDS GO." />
-              </p>
-            </FadeIn>
           </div>
         )}
       </Slide>
