@@ -189,7 +189,7 @@ export function OrderConfirmationModal({
                   <p className="text-[10px] tracking-widest text-muted-foreground text-center">
                     RECEIVER ROUTING
                   </p>
-                  <div className="space-y-1">
+                  <div className="space-y-1 px-4">
                     {order.receivers.map((r, i) => (
                       <div key={i} className="flex justify-between text-xs font-mono">
                         <span className="text-muted-foreground">
