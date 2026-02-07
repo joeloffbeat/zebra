@@ -22,12 +22,15 @@ export function useOrderStatus() {
         const orderStatus = order.status as string;
         if (orderStatus === 'settled' || orderStatus === 'cancelled') continue;
 
-        // Backend returns "0xabcdef012345..." (16 chars + "...")
-        const commitmentPrefix = order.commitment.slice(0, 16) + '...';
+        // Normalize: strip 0x, lowercase, remove trailing "..." for comparison
+        const normalize = (s: string) =>
+          s.replace(/\.{3}$/, '').replace(/^0x/i, '').toLowerCase();
+
+        const orderPrefix = normalize(order.commitment.slice(0, 16));
 
         const isMatch =
-          match.commitmentAPrefix === commitmentPrefix ||
-          match.commitmentBPrefix === commitmentPrefix;
+          normalize(match.commitmentAPrefix) === orderPrefix ||
+          normalize(match.commitmentBPrefix) === orderPrefix;
 
         if (isMatch) {
           // DeepBook flash loan settlements have "deepbook:" prefix in commitmentB

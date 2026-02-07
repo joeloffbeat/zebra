@@ -44,20 +44,24 @@ export default function OrdersPage() {
   const { matches } = useBackend();
   const { latestMatch, showMatchModal, setShowMatchModal } = useOrderStatus();
 
-  const filteredOrders = orders.filter((order) => {
-    if (filter === "ALL") return true;
-    return order.status.toUpperCase() === filter;
-  });
+  const filteredOrders = orders
+    .filter((order) => {
+      if (filter === "ALL") return true;
+      return order.status.toUpperCase() === filter;
+    })
+    .sort((a, b) => b.createdAt - a.createdAt);
 
   // Find settlement digest for an order by matching commitment prefix
   const findSettlementDigest = (commitment: string): string | undefined => {
     if (!matches.data) return undefined;
-    // Backend returns "0xabcdef012345..." (16 chars + "...")
-    const prefix = commitment.slice(0, 16) + '...';
+    // Normalize: strip 0x, lowercase, remove trailing "..." for comparison
+    const normalize = (s: string) =>
+      s.replace(/\.{3}$/, '').replace(/^0x/i, '').toLowerCase();
+    const orderPrefix = normalize(commitment.slice(0, 16));
     const match = matches.data.find(
       (m) =>
-        m.commitmentAPrefix === prefix ||
-        m.commitmentBPrefix === prefix
+        normalize(m.commitmentAPrefix) === orderPrefix ||
+        normalize(m.commitmentBPrefix) === orderPrefix
     );
     return match?.settlementDigest;
   };

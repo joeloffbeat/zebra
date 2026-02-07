@@ -114,11 +114,12 @@ export default function TradePage() {
     }
   };
 
-  const activeOrders = orders.filter(
-    (o) => o.status === "pending" || o.status === "matched"
-  );
+  const activeOrders = orders
+    .filter((o) => o.status === "pending" || o.status === "matched")
+    .sort((a, b) => b.createdAt - a.createdAt);
 
-  const settledMatches = matches.data?.filter((m) => m.settled) || [];
+  const settledMatches = (matches.data?.filter((m) => m.settled) || [])
+    .sort((a, b) => b.timestamp - a.timestamp);
 
   const handleSubmit = useCallback(() => {
     setSubmitError(null);
