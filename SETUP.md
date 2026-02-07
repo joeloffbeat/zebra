@@ -12,7 +12,7 @@
 zebra/
   contracts/     # Move smart contract (dark_pool.move)
   circuits/      # Circom ZK circuit + build artifacts (wasm, zkey, vkey)
-  backend/       # Express matching engine (TEE-ready)
+  matching-engine/  # TEE matching engine (Marlin Oyster)
   frontend/      # Next.js frontend
   scripts/       # Deploy, test, and utility scripts
   .env           # Environment config (not committed)
@@ -44,8 +44,8 @@ MATCHER_CAP_ID=0x94adaf3185e314a7391ed3f7ead89e10fcbf1fa65f8abd94b39c3abf2dbb37c
 ### 2. Install Dependencies
 
 ```bash
-# Backend
-cd backend && npm install && cd ..
+# Matching Engine
+cd matching-engine && npm install && cd ..
 
 # Scripts (for E2E tests)
 cd scripts && npm install && cd ..
@@ -54,10 +54,10 @@ cd scripts && npm install && cd ..
 cd frontend && npm install && cd ..
 ```
 
-### 3. Start Backend (Matching Engine)
+### 3. Start Matching Engine (TEE)
 
 ```bash
-cd backend && npm run dev
+cd matching-engine && npm run dev
 ```
 
 Expected output:
@@ -69,7 +69,7 @@ Skipped past historical events (cursor: ...)
 Polling for new OrderCommitted events...
 ```
 
-### 4. Verify Backend
+### 4. Verify Matching Engine
 
 ```bash
 # Health check
@@ -84,14 +84,14 @@ curl http://localhost:3001/tee/metrics
 
 ### 5. Run E2E Test (Full Flow)
 
-With the backend running in another terminal:
+With the matching engine running in another terminal:
 
 ```bash
 npx tsx scripts/test-e2e-tee.ts
 ```
 
 This runs 10 phases:
-1. Backend health + TEE check
+1. Matching engine health + TEE check
 2. Submit BUY order on-chain (ZK proof)
 3. Submit SELL order on-chain (ZK proof)
 4. Poll for match + settlement
@@ -119,7 +119,7 @@ Frontend reads from `frontend/.env.local` (already configured).
 | Endpoint | Method | Description |
 |----------|--------|-------------|
 | `/health` | GET | Health check |
-| `/status` | GET | Backend status + TEE info + order counts |
+| `/status` | GET | Matching engine status + TEE info + order counts |
 | `/orders` | GET | Privacy-safe order list (commitment prefixes only) |
 | `/matches` | GET | Privacy-safe match list (no execution details) |
 | `/tee/metrics` | GET | Full TEE metrics dashboard data |
@@ -181,7 +181,7 @@ npx tsx scripts/create-pool.ts
 1. **DeepBook midPrice**: Fails with "Missing transaction sender" — SDK bug, non-blocking (matcher uses null refPrice)
 2. **Flash loan**: `UnusedValueWithoutDrop` on testnet — DeepBook PTB hot potato pattern issue
 3. **Testnet faucet**: Rate-limited. Use https://faucet.sui.io web UI if CLI/API blocked
-4. **Historical events**: Backend skips them on startup. If you need to reprocess, delete cursor state (restart backend)
+4. **Historical events**: Matching engine skips them on startup. If you need to reprocess, restart the engine
 
 ---
 

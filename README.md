@@ -67,7 +67,7 @@ zebra/
 │       ├── components/     # UI + zebra-themed components
 │       ├── hooks/          # use-dark-pool, use-wallet
 │       └── lib/            # Sui client, ZK prover, Seal client
-├── backend/                # Express matching engine
+├── matching-engine/        # TEE matching engine (Marlin Oyster)
 │   └── src/
 │       ├── matcher.ts      # Order matching logic
 │       ├── order-book.ts   # Order book management
@@ -95,9 +95,9 @@ npm install
 npm run dev
 ```
 
-### Backend
+### Matching Engine (TEE)
 ```bash
-cd backend
+cd matching-engine
 npm install
 npm run dev
 ```
