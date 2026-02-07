@@ -36,11 +36,11 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const NETWORK = 'testnet';
 const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), network: 'testnet' });
 
-const PACKAGE_ID = process.env.DARK_POOL_PACKAGE!;
-const POOL_OBJECT_ID = process.env.DARK_POOL_OBJECT!;
+const PACKAGE_ID = '0x381920f137dcbc01865fddb24d48b147d9caaa34b6c9a431e6081bbe0e31d84f';
+const POOL_OBJECT_ID = '0x97fd88d921bb0f70f93a03ff63d89a31aa08227cea0847413b06c2d5cba04344';
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-const SEAL_ALLOWLIST_ID = process.env.SEAL_ALLOWLIST_ID || '';
-const SEAL_PACKAGE_ID = process.env.SEAL_PACKAGE_ID || '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
+const SEAL_ALLOWLIST_ID = '0xba6fda6cbedd1938debcec8883b07f1c7d2d1b9d744fe57c98c48e75cf05acf8';
+const SEAL_PACKAGE_ID = '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
 
 const TYPE_ARGS: [string] = ['0x2::sui::SUI'];
 
