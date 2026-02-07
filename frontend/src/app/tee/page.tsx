@@ -263,11 +263,11 @@ export default function TeePage() {
               </div>
             </div>
 
-            {/* ENGINE LOGS */}
+            {/* MATCHING ENGINE LOGS */}
             <div className="border border-border">
               <div className="p-4 border-b border-border">
                 <span className="text-xs tracking-widest text-muted-foreground">
-                  ENGINE LOGS ({logEntries.length})
+                  MATCHING ENGINE LOGS ({logEntries.length})
                 </span>
               </div>
               <div className="max-h-96 overflow-y-auto bg-black/80 p-4 font-mono text-[10px] leading-relaxed">
