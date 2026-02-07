@@ -2,21 +2,20 @@
 
 import { useQuery, useMutation } from '@tanstack/react-query';
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
-
-async function fetchBackend(path: string) {
-  const res = await fetch(`${BACKEND_URL}${path}`);
-  if (!res.ok) throw new Error(`Backend ${path}: ${res.status}`);
+// All requests go through Next.js API routes (server-side proxy to matching engine)
+async function fetchApi(path: string) {
+  const res = await fetch(`/api${path}`);
+  if (!res.ok) throw new Error(`API ${path}: ${res.status}`);
   return res.json();
 }
 
-async function postBackend(path: string, body?: Record<string, unknown>) {
-  const res = await fetch(`${BACKEND_URL}${path}`, {
+async function postApi(path: string, body?: Record<string, unknown>) {
+  const res = await fetch(`/api${path}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: body ? JSON.stringify(body) : undefined,
   });
-  if (!res.ok) throw new Error(`Backend POST ${path}: ${res.status}`);
+  if (!res.ok) throw new Error(`API POST ${path}: ${res.status}`);
   return res.json();
 }
 
@@ -69,7 +68,7 @@ export interface TeeAttestation {
 export function useBackend() {
   const status = useQuery<BackendStatus>({
     queryKey: ['backend-status'],
-    queryFn: () => fetchBackend('/status'),
+    queryFn: () => fetchApi('/status'),
     refetchInterval: 5000,
     retry: 1,
   });
@@ -77,7 +76,7 @@ export function useBackend() {
   const orders = useQuery<BackendOrder[]>({
     queryKey: ['backend-orders'],
     queryFn: async () => {
-      const data = await fetchBackend('/orders');
+      const data = await fetchApi('/orders');
       return data.orders || [];
     },
     refetchInterval: 3000,
@@ -87,7 +86,7 @@ export function useBackend() {
   const matches = useQuery<BackendMatch[]>({
     queryKey: ['backend-matches'],
     queryFn: async () => {
-      const data = await fetchBackend('/matches');
+      const data = await fetchApi('/matches');
       return data.matches || [];
     },
     refetchInterval: 3000,
@@ -96,7 +95,7 @@ export function useBackend() {
 
   const teeMetrics = useQuery<TeeMetrics>({
     queryKey: ['tee-metrics'],
-    queryFn: () => fetchBackend('/tee/metrics'),
+    queryFn: () => fetchApi('/tee/metrics'),
     refetchInterval: 5000,
     retry: 1,
   });
@@ -104,7 +103,7 @@ export function useBackend() {
   const teeAttestations = useQuery<TeeAttestation[]>({
     queryKey: ['tee-attestations'],
     queryFn: async () => {
-      const data = await fetchBackend('/tee/attestations');
+      const data = await fetchApi('/tee/attestations');
       return data.attestations || [];
     },
     refetchInterval: 10000,
@@ -113,14 +112,14 @@ export function useBackend() {
 
   const midPrice = useQuery<{ midPrice: number | null }>({
     queryKey: ['deepbook-midprice'],
-    queryFn: () => fetchBackend('/deepbook/midprice'),
+    queryFn: () => fetchApi('/deepbook/midprice'),
     refetchInterval: 10000,
     retry: 1,
   });
 
   const flashLoanDemo = useMutation({
     mutationFn: (params: { pool?: string; amount?: number }) =>
-      postBackend('/flash-loan/demo', params),
+      postApi('/flash-loan/demo', params),
   });
 
   return {
@@ -131,6 +130,5 @@ export function useBackend() {
     teeAttestations,
     midPrice,
     flashLoanDemo,
-    backendUrl: BACKEND_URL,
   };
 }
