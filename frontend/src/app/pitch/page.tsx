@@ -476,7 +476,7 @@ export default function PitchPage() {
                 {
                   num: "04",
                   title: "TEE MATCHING",
-                  desc: "NAUTILUS ENCLAVE DECRYPTS ORDERS AND RUNS PRICE-TIME PRIORITY MATCHING IN 60-SECOND BATCHES",
+                  desc: "TEE ENCLAVE DECRYPTS ORDERS AND RUNS PRICE-TIME PRIORITY MATCHING IN 60-SECOND BATCHES",
                   tag: "EXECUTION",
                 },
                 {
@@ -545,10 +545,10 @@ export default function PitchPage() {
                   <div className="grid grid-cols-3 gap-4">
                     <div className="border border-border/50 p-4 text-center">
                       <div className="text-[15px] tracking-widest">
-                        <ESub text="ZK PROOF" />
+                        <ESub text="GROTH16 PROOF" />
                       </div>
                       <div className="text-[13px] tracking-wide text-muted-foreground mt-2">
-                        <EDesc text="SNARKJS · CIRCOM" />
+                        <EDesc text="CIRCOM · SNARKJS" />
                       </div>
                     </div>
                     <div className="border border-border/50 p-4 text-center">
@@ -616,7 +616,7 @@ export default function PitchPage() {
                     <div className="grid grid-cols-2 gap-3">
                       {[
                         "FLASH LOANS",
-                        "SUI <> USDC",
+                        "SUI <> DBUSDC",
                         "MID-PRICE",
                         "HOT POTATO",
                       ].map((item) => (
@@ -651,7 +651,7 @@ export default function PitchPage() {
               <FadeIn isVisible={isVisible} delay={750}>
                 <div className="border border-border p-8">
                   <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
-                    <ELabel text="TEE MATCHING ENGINE (NAUTILUS)" />
+                    <ELabel text="TEE MATCHING ENGINE (NAUTILUS-READY)" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
@@ -698,93 +698,105 @@ export default function PitchPage() {
 
               <FadeIn isVisible={isVisible} delay={300}>
                 <p className="text-[16px] tracking-wide opacity-60 leading-relaxed max-w-3xl">
-                  <EDesc text="MOST PRIVACY DEX DESIGNS STOP AT HIDING THE ORDER. BUT SETTLEMENT STILL REVEALS THE RECIPIENT. ZEBRA BREAKS THIS ENTIRELY." />
+                  <EDesc text="SETTLEMENT REVEALS THE RECIPIENT. ZEBRA BREAKS THIS LINK ENTIRELY." />
                 </p>
               </FadeIn>
             </div>
 
-            {/* Before / After comparison */}
-            <div className="grid md:grid-cols-2 gap-8">
-              <FadeIn isVisible={isVisible} delay={450}>
-                <div className="border border-current/20 p-8 space-y-6">
-                  <div className="text-[14px] tracking-[0.3em] opacity-40">
-                    <ELabel text="WITHOUT ZEBRA" />
-                  </div>
+            {/* WITHOUT ZEBRA — simple linear link */}
+            <FadeIn isVisible={isVisible} delay={450}>
+              <div className="border border-current/20 p-8">
+                <div className="text-[13px] tracking-[0.3em] opacity-40 mb-6">
+                  <ELabel text="WITHOUT ZEBRA" />
+                </div>
+                <div className="flex items-center justify-center gap-6 font-mono">
+                  <span className="text-[15px] tracking-wide border border-current/20 px-4 py-2">
+                    <ESub text="0xAAA" />
+                  </span>
+                  <span className="text-[16px] opacity-30">→</span>
+                  <span className="text-[14px] opacity-40">
+                    <ESub text="PLACES ORDER" />
+                  </span>
+                  <span className="text-[16px] opacity-30">→</span>
+                  <span className="text-[15px] tracking-wide border border-current/20 px-4 py-2">
+                    <ESub text="0xAAA" />
+                  </span>
+                  <span className="text-[14px] opacity-40">
+                    <ESub text="RECEIVES FUNDS" />
+                  </span>
+                </div>
+                <div className="text-center mt-5">
+                  <span className="text-[13px] tracking-widest opacity-30">
+                    <ESub text="SAME ADDRESS — TRIVIALLY LINKED" />
+                  </span>
+                </div>
+              </div>
+            </FadeIn>
 
-                  <div className="space-y-4 font-mono">
-                    <div className="flex items-center gap-4">
-                      <span className="text-[15px] tracking-wide border border-current/20 px-3 py-1.5">
-                        <ESub text="0xAAA" />
-                      </span>
-                      <span className="text-[15px] opacity-40">
-                        <ESub text="PLACES ORDER" />
-                      </span>
-                    </div>
-                    <div className="text-center text-[16px] opacity-30">↓</div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-[15px] tracking-wide border border-current/20 px-3 py-1.5">
-                        <ESub text="0xAAA" />
-                      </span>
-                      <span className="text-[15px] opacity-40">
-                        <ESub text="RECEIVES FUNDS" />
-                      </span>
-                    </div>
-                  </div>
-
-                  <div className="border-t border-current/10 pt-4">
-                    <span className="text-[14px] tracking-widest opacity-40">
-                      <ESub text="TRIVIALLY LINKED" />
+            {/* WITH ZEBRA — horizontal branching */}
+            <FadeIn isVisible={isVisible} delay={650}>
+              <div className="border border-current/40 p-8">
+                <div className="text-[13px] tracking-[0.3em] mb-8">
+                  <ELabel text="WITH ZEBRA" />
+                </div>
+                <div className="flex items-center justify-center font-mono">
+                  {/* Source */}
+                  <div className="flex items-center gap-4 shrink-0">
+                    <span className="text-[15px] tracking-wide border border-current/30 px-4 py-2">
+                      <ESub text="0xAAA" />
+                    </span>
+                    <span className="text-[14px] opacity-50">
+                      <ESub text="PLACES ORDER" />
                     </span>
                   </div>
-                </div>
-              </FadeIn>
 
-              <FadeIn isVisible={isVisible} delay={600}>
-                <div className="border border-current/40 p-8 space-y-6">
-                  <div className="text-[14px] tracking-[0.3em]">
-                    <ELabel text="WITH ZEBRA" />
+                  {/* Branching arrows */}
+                  <div className="flex flex-col items-start mx-6 shrink-0">
+                    {/* Top branch line */}
+                    <div className="flex items-center">
+                      <div className="w-12 h-px bg-current/30" />
+                      <div className="w-3 h-3 border-t border-r border-current/30 -rotate-45 -ml-2" />
+                    </div>
+                    {/* Vertical connector */}
+                    <div className="w-px h-6 bg-current/30 ml-0" />
+                    {/* Bottom branch line */}
+                    <div className="flex items-center">
+                      <div className="w-12 h-px bg-current/30" />
+                      <div className="w-3 h-3 border-t border-r border-current/30 -rotate-45 -ml-2" />
+                    </div>
                   </div>
 
-                  <div className="space-y-4 font-mono">
-                    <div className="flex items-center gap-4">
-                      <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
-                        <ESub text="0xAAA" />
-                      </span>
-                      <span className="text-[15px] opacity-50">
-                        <ESub text="PLACES ORDER" />
-                      </span>
-                    </div>
-                    <div className="text-center text-[16px] opacity-30">↓</div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
+                  {/* Receivers */}
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[15px] tracking-wide border border-current/30 px-4 py-2">
                         <ESub text="0xBBB" />
                       </span>
-                      <span className="text-[15px] opacity-50">
-                        <ESub text="RECEIVES 60%" />
+                      <span className="text-[14px] opacity-50">
+                        <ESub text="60%" />
                       </span>
                     </div>
-                    <div className="flex items-center gap-4">
-                      <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
+                    <div className="flex items-center gap-3">
+                      <span className="text-[15px] tracking-wide border border-current/30 px-4 py-2">
                         <ESub text="0xCCC" />
                       </span>
-                      <span className="text-[15px] opacity-50">
-                        <ESub text="RECEIVES 40%" />
+                      <span className="text-[14px] opacity-50">
+                        <ESub text="40%" />
                       </span>
                     </div>
                   </div>
-
-                  <div className="border-t border-current/20 pt-4">
-                    <span className="text-[14px] tracking-widest">
-                      <ESub text="NO VISIBLE LINK" />
-                    </span>
-                  </div>
                 </div>
-              </FadeIn>
-            </div>
+                <div className="text-center mt-6">
+                  <span className="text-[13px] tracking-widest">
+                    <ESub text="NO VISIBLE LINK BETWEEN TRADER AND RECIPIENTS" />
+                  </span>
+                </div>
+              </div>
+            </FadeIn>
 
-            <FadeIn isVisible={isVisible} delay={750}>
+            <FadeIn isVisible={isVisible} delay={800}>
               <p className="text-[14px] tracking-wide opacity-50 leading-relaxed max-w-3xl">
-                <EDesc text="RECEIVER ADDRESSES AND SPLIT PERCENTAGES LIVE INSIDE THE SEAL-ENCRYPTED PAYLOAD. THE TEE READS THEM AT SETTLEMENT AND ROUTES FUNDS ACCORDINGLY. ON-CHAIN, THERE IS NO CONNECTION BETWEEN THE TRADER AND THE RECIPIENTS." />
+                <EDesc text="RECEIVERS AND SPLIT PERCENTAGES LIVE INSIDE THE SEAL-ENCRYPTED PAYLOAD. ONLY THE TEE KNOWS WHERE FUNDS GO." />
               </p>
             </FadeIn>
           </div>
@@ -836,7 +848,7 @@ export default function PitchPage() {
                 },
                 {
                   title: "NAUTILUS TEE",
-                  desc: "MATCHING ENGINE INSIDE A TRUSTED EXECUTION ENVIRONMENT. SECP256K1 ATTESTATION SIGNING. HARDWARE-BACKED ISOLATION VIA INTEL NITRO SIDECARS IN PRODUCTION.",
+                  desc: "MATCHING ENGINE BUILT FOR NAUTILUS TEE WITH HARDWARE ATTESTATION. SECP256K1 SIGNING. RUNNING IN LOCAL-DEV MODE FOR HACKATHON.",
                   tag: "EXECUTION",
                 },
               ].map((item, i) => (
@@ -1044,7 +1056,7 @@ export default function PitchPage() {
                     layer: "TEE FRAMEWORK",
                     tech: "NAUTILUS",
                     detail:
-                      "INTEL NITRO ENCLAVES · SECP256K1 ATTESTATION · HARDWARE ISOLATION",
+                      "SECP256K1 ATTESTATION · LOCAL-DEV MODE · PRODUCTION-READY",
                   },
                   {
                     layer: "FLASH LOANS",
