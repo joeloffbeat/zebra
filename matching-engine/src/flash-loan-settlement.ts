@@ -5,6 +5,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import { bcs } from '@mysten/sui/bcs';
 import { config } from './config.js';
+import { logService } from './log-service.js';
 import { DecryptedOrderInfo } from './order-book.js';
 
 export interface FlashLoanSettlementResult {
@@ -30,6 +31,7 @@ export class FlashLoanSettlementService {
         this.keypair = Ed25519Keypair.fromSecretKey(secretKey);
       } catch (error) {
         console.error('FlashLoanSettlementService: Failed to initialize keypair:', error);
+        logService.addLog('error', 'flash-loan', `FlashLoanSettlementService: Failed to initialize keypair: ${error}`);
       }
     }
 
@@ -40,6 +42,7 @@ export class FlashLoanSettlementService {
     });
 
     console.log('FlashLoanSettlementService initialized');
+    logService.addLog('info', 'flash-loan', 'FlashLoanSettlementService initialized');
   }
 
   /**
@@ -52,6 +55,7 @@ export class FlashLoanSettlementService {
 
     if (!this.keypair || !config.darkPoolPackage || !config.darkPoolObject || !config.matcherCapId) {
       console.log('FlashLoanSettlement: Not configured (missing package, pool, or matcherCapId)');
+      logService.addLog('warn', 'flash-loan', 'FlashLoanSettlement: Not configured (missing package, pool, or matcherCapId)');
       return sells.map(s => ({
         success: false,
         commitment: s.commitment,
@@ -67,6 +71,7 @@ export class FlashLoanSettlementService {
       if (result) return result;
     } catch (error) {
       console.warn('FlashLoanSettlement: Batch PTB failed, falling back to per-order:', error);
+      logService.addLog('warn', 'flash-loan', `FlashLoanSettlement: Batch PTB failed, falling back to per-order: ${error}`);
     }
 
     // Fallback: settle each order individually
@@ -152,10 +157,12 @@ export class FlashLoanSettlementService {
 
     if (result.effects?.status?.status !== 'success') {
       console.error('FlashLoanSettlement: Batch PTB failed:', result.effects?.status);
+      logService.addLog('error', 'flash-loan', `FlashLoanSettlement: Batch PTB failed: ${JSON.stringify(result.effects?.status)}`);
       return null;
     }
 
     console.log(`FlashLoanSettlement: Batch PTB succeeded with ${sells.length} sells, tx: ${result.digest}`);
+    logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Batch PTB succeeded with ${sells.length} sells, tx: ${result.digest}`);
 
     return sells.map(sell => ({
       success: true,
@@ -234,6 +241,7 @@ export class FlashLoanSettlementService {
     }
 
     console.log(`FlashLoanSettlement: Single PTB succeeded for ${sell.commitment.slice(0, 16)}..., tx: ${result.digest}`);
+    logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Single PTB succeeded for ${sell.commitment.slice(0, 16)}..., tx: ${result.digest}`);
 
     return {
       success: true,

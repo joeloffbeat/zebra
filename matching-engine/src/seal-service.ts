@@ -4,6 +4,7 @@ import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import { Transaction } from '@mysten/sui/transactions';
 import { config } from './config.js';
+import { logService } from './log-service.js';
 
 // Testnet key server object IDs (verified working in playground)
 const TESTNET_KEY_SERVERS = [
@@ -44,8 +45,10 @@ export class SealService {
         this.keypair = Ed25519Keypair.fromSecretKey(secretKey);
         this.address = this.keypair.toSuiAddress();
         console.log('SealService initialized with address:', this.address);
+        logService.addLog('info', 'seal', `SealService initialized with address: ${this.address}`);
       } catch (error) {
         console.error('SealService: Failed to initialize keypair:', error);
+        logService.addLog('error', 'seal', `Failed to initialize keypair: ${error}`);
       }
     }
   }
@@ -79,6 +82,7 @@ export class SealService {
   async decryptOrderData(encryptedData: Uint8Array): Promise<DecryptedOrderData | null> {
     if (!this.keypair || !config.sealAllowlistId) {
       console.log('Seal decryption not configured, returning null');
+      logService.addLog('warn', 'seal', 'Seal decryption not configured, returning null');
       return null;
     }
 
@@ -120,6 +124,7 @@ export class SealService {
       };
     } catch (error) {
       console.error('Seal decryption failed:', error);
+      logService.addLog('error', 'seal', `Seal decryption failed: ${error}`);
       return null;
     }
   }

@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import { sha256 } from '@noble/hashes/sha256';
 import { secp256k1 } from '@noble/curves/secp256k1';
 import { bytesToHex } from '@noble/hashes/utils';
+import { logService } from './log-service.js';
 
 export interface SettlementAttestation {
   commitmentA: string;
@@ -83,9 +84,12 @@ export class TeeAttestationService {
       this.publicKeyHex = bytesToHex(secp256k1.getPublicKey(this.privateKey, true));
       this.mode = 'enclave';
       console.log('TEE: Enclave mode initialized');
+      logService.addLog('info', 'tee', 'TEE: Enclave mode initialized');
       console.log('TEE: Public key:', this.publicKeyHex);
+      logService.addLog('info', 'tee', `TEE: Public key: ${this.publicKeyHex}`);
     } catch (error) {
       console.warn('TEE: Failed to read enclave key, falling back to local-dev mode:', error);
+      logService.addLog('warn', 'tee', `TEE: Failed to read enclave key, falling back to local-dev mode: ${error}`);
       this.initLocalDev();
     }
   }
@@ -95,7 +99,9 @@ export class TeeAttestationService {
     this.publicKeyHex = bytesToHex(secp256k1.getPublicKey(this.privateKey, true));
     this.mode = 'local-dev';
     console.warn('TEE: Running in local-dev mode (not inside enclave)');
+    logService.addLog('warn', 'tee', 'TEE: Running in local-dev mode (not inside enclave)');
     console.log('TEE: Ephemeral public key:', this.publicKeyHex);
+    logService.addLog('info', 'tee', `TEE: Ephemeral public key: ${this.publicKeyHex}`);
   }
 
   isEnclave(): boolean {
@@ -192,6 +198,7 @@ export class TeeAttestationService {
     console.log(`  A: ${commitmentA.slice(0, 16)}...`);
     console.log(`  B: ${commitmentB.slice(0, 16)}...`);
     console.log(`  Sig: ${signature.toCompactHex().slice(0, 32)}...`);
+    logService.addLog('info', 'tee', `Settlement attestation: A=${commitmentA.slice(0, 16)}... B=${commitmentB.slice(0, 16)}... sig=${signature.toCompactHex().slice(0, 32)}...`);
 
     return attestation;
   }
