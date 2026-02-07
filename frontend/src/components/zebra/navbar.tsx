@@ -5,18 +5,16 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 import { Button } from "@/components/ui";
 import { WalletModal } from "@/components/modals";
+import { WalletDropdown } from "@/components/zebra/wallet-dropdown";
 import { useWallet } from "@/hooks/use-wallet";
 import { useWalletStore } from "@/lib/stores/wallet-store";
 
 const NAV_LINKS = [
   { href: "/trade", label: "TRADE" },
+  { href: "/deposit", label: "DEPOSIT" },
   { href: "/orders", label: "ORDERS" },
   { href: "/tee", label: "TEE" },
 ];
-
-function truncateAddress(address: string): string {
-  return `${address.slice(0, 6)}...${address.slice(-4)}`;
-}
 
 export function Navbar() {
   const pathname = usePathname();
@@ -25,9 +23,7 @@ export function Navbar() {
   const [walletModalOpen, setWalletModalOpen] = useState(false);
 
   const handleWalletClick = () => {
-    if (isConnected) {
-      disconnect();
-    } else {
+    if (!isConnected) {
       setWalletModalOpen(true);
     }
   };
@@ -57,16 +53,17 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-4">
-            {isConnected && address && (
-              <span className="text-[10px] tracking-wide text-muted-foreground font-mono">
-                {balance.sui} SUI &middot; {balance.dbusdc} DBUSDC
-              </span>
+            {isConnected && address ? (
+              <WalletDropdown
+                suiAddress={address}
+                balance={balance}
+                onDisconnect={disconnect}
+              />
+            ) : (
+              <Button onClick={handleWalletClick}>
+                CONNECT
+              </Button>
             )}
-            <Button onClick={handleWalletClick}>
-              {isConnected && address
-                ? truncateAddress(address)
-                : "CONNECT"}
-            </Button>
           </div>
         </div>
       </header>

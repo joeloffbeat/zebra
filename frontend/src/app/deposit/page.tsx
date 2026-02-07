@@ -1,7 +1,6 @@
 "use client";
 
-import Link from "next/link";
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import {
   Button,
   Input,
@@ -12,51 +11,106 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui";
+import { Navbar } from "@/components/zebra";
+import { useWallet } from "@/hooks/use-wallet";
+import { useWalletStore } from "@/lib/stores/wallet-store";
+import { getQuoteArbToSui, executeBridge } from "@/lib/lifi/bridge";
+import type { BridgeQuote } from "@/lib/lifi/bridge";
+import { LIFI_CHAIN_IDS } from "@/lib/constants";
 
 const CHAINS = [
-  { id: "ethereum", name: "ETHEREUM", icon: "ETH" },
-  { id: "arbitrum", name: "ARBITRUM", icon: "ARB" },
-  { id: "base", name: "BASE", icon: "BASE" },
-  { id: "polygon", name: "POLYGON", icon: "POL" },
-  { id: "optimism", name: "OPTIMISM", icon: "OP" },
+  { id: "arbitrum", name: "ARBITRUM", chainId: LIFI_CHAIN_IDS.ARBITRUM },
+  { id: "ethereum", name: "ETHEREUM", chainId: LIFI_CHAIN_IDS.ETHEREUM },
+  { id: "base", name: "BASE", chainId: LIFI_CHAIN_IDS.BASE },
+  { id: "optimism", name: "OPTIMISM", chainId: LIFI_CHAIN_IDS.OPTIMISM },
+  { id: "polygon", name: "POLYGON", chainId: LIFI_CHAIN_IDS.POLYGON },
 ];
 
 const TOKENS = [
-  { symbol: "ETH", name: "ETHEREUM" },
-  { symbol: "USDC", name: "USD COIN" },
-  { symbol: "USDT", name: "TETHER" },
-  { symbol: "DAI", name: "DAI" },
+  { symbol: "USDC", name: "USD COIN", decimals: 6 },
+  { symbol: "ETH", name: "ETHEREUM", decimals: 18 },
+  { symbol: "USDT", name: "TETHER", decimals: 6 },
 ];
 
-export default function DepositPage() {
-  const [fromChain, setFromChain] = useState("ethereum");
-  const [fromToken, setFromToken] = useState("ETH");
-  const [amount, setAmount] = useState("");
+type BridgeStatus = "idle" | "quoting" | "quoted" | "executing" | "success" | "error";
 
-  const estimatedReceive = amount ? (parseFloat(amount) * 1720).toFixed(2) : "0.00";
+export default function DepositPage() {
+  const [fromChain, setFromChain] = useState("arbitrum");
+  const [fromToken, setFromToken] = useState("USDC");
+  const [amount, setAmount] = useState("");
+  const [quote, setQuote] = useState<BridgeQuote | null>(null);
+  const [status, setStatus] = useState<BridgeStatus>("idle");
+  const [error, setError] = useState<string | null>(null);
+  const [txHash, setTxHash] = useState<string | null>(null);
+
+  const { address, isConnected } = useWallet();
+  const { balance } = useWalletStore();
+
+  const handleNumericInput = (value: string) => {
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      setAmount(value);
+      setQuote(null);
+      setStatus("idle");
+    }
+  };
+
+  const handleGetQuote = useCallback(async () => {
+    if (!amount || parseFloat(amount) <= 0) return;
+    if (!address) return;
+
+    setStatus("quoting");
+    setError(null);
+
+    try {
+      const token = TOKENS.find(t => t.symbol === fromToken);
+      const decimals = token?.decimals || 6;
+      const amountRaw = (parseFloat(amount) * Math.pow(10, decimals)).toString();
+
+      const result = await getQuoteArbToSui(amountRaw, address, address);
+      setQuote(result);
+      setStatus("quoted");
+    } catch (err) {
+      console.error('[LiFi] Quote failed:', err);
+      setError(err instanceof Error ? err.message : 'Failed to get quote');
+      setStatus("error");
+    }
+  }, [amount, address, fromToken]);
+
+  const handleExecuteBridge = useCallback(async () => {
+    if (!quote) return;
+
+    setStatus("executing");
+    setError(null);
+
+    try {
+      const result = await executeBridge(quote.route);
+      const hash = result.steps?.[0]?.execution?.process?.[0]?.txHash;
+      if (hash) setTxHash(hash);
+      setStatus("success");
+    } catch (err) {
+      console.error('[LiFi] Bridge failed:', err);
+      setError(err instanceof Error ? err.message : 'Bridge execution failed');
+      setStatus("error");
+    }
+  }, [quote]);
+
+  const estimatedOutput = quote
+    ? (Number(quote.estimatedOutput) / 1e6).toFixed(2)
+    : null;
+
+  const estimatedTime = quote
+    ? `~${Math.ceil(quote.estimatedTime / 60)} MIN`
+    : "~3 MIN";
 
   return (
     <div className="min-h-screen bg-background">
-      {/* HEADER */}
-      <header className="border-b border-border">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <Link href="/" className="text-sm tracking-widest">
-            ZEBRA
-          </Link>
-          <div className="flex items-center gap-6">
-            <Link href="/trade">
-              <Button>TRADE</Button>
-            </Link>
-            <Button>0X1234...5678</Button>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       <main className="container mx-auto px-6 py-12 max-w-2xl">
         <div className="text-center mb-12">
           <h1 className="text-lg tracking-widest mb-2">DEPOSIT</h1>
           <p className="text-xs tracking-wide text-muted-foreground">
-            DEPOSIT FROM ANY CHAIN, TRADE ON SUI
+            BRIDGE FROM ANY CHAIN, TRADE ON SUI
           </p>
         </div>
 
@@ -71,7 +125,7 @@ export default function DepositPage() {
               {/* CHAIN */}
               <div className="space-y-2">
                 <Label>CHAIN</Label>
-                <Select value={fromChain} onValueChange={setFromChain}>
+                <Select value={fromChain} onValueChange={(v) => { setFromChain(v); setQuote(null); setStatus("idle"); }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -88,7 +142,7 @@ export default function DepositPage() {
               {/* TOKEN */}
               <div className="space-y-2">
                 <Label>TOKEN</Label>
-                <Select value={fromToken} onValueChange={setFromToken}>
+                <Select value={fromToken} onValueChange={(v) => { setFromToken(v); setQuote(null); setStatus("idle"); }}>
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -107,19 +161,22 @@ export default function DepositPage() {
                 <Label>AMOUNT</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="0.00"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => handleNumericInput(e.target.value)}
                     className="flex-1"
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
                     {fromToken}
                   </span>
                 </div>
-                <div className="text-xs text-muted-foreground">
-                  BALANCE: 2.34 {fromToken}
-                </div>
+                {isConnected && (
+                  <div className="text-[10px] text-muted-foreground tracking-wide">
+                    SUI BALANCE: {balance.sui} SUI &middot; {balance.usdc} USDC
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -132,7 +189,7 @@ export default function DepositPage() {
 
             <div className="flex items-center justify-between py-3 border-b border-border">
               <span className="text-xs tracking-widest">CHAIN</span>
-              <span className="text-xs tracking-wide">SUI</span>
+              <span className="text-xs tracking-wide">SUI MAINNET</span>
             </div>
 
             <div className="flex items-center justify-between py-3">
@@ -142,45 +199,57 @@ export default function DepositPage() {
           </div>
 
           {/* ROUTE SECTION */}
-          <div className="p-6 border-b border-border">
-            <div className="text-xs tracking-widest text-muted-foreground mb-4">
-              ROUTE
-            </div>
+          {quote && (
+            <div className="p-6 border-b border-border">
+              <div className="text-xs tracking-widest text-muted-foreground mb-4">
+                ROUTE
+              </div>
 
-            <div className="space-y-3 text-xs">
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 border border-border flex items-center justify-center text-[8px]">1</span>
-                <span className="text-muted-foreground">SWAP ON</span>
-                <span>UNISWAP</span>
-              </div>
-              <div className="ml-2 h-4 border-l border-border" />
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 border border-border flex items-center justify-center text-[8px]">2</span>
-                <span className="text-muted-foreground">BRIDGE VIA</span>
-                <span>WORMHOLE</span>
-              </div>
-              <div className="ml-2 h-4 border-l border-border" />
-              <div className="flex items-center gap-2">
-                <span className="w-4 h-4 border border-border flex items-center justify-center text-[8px]">3</span>
-                <span className="text-muted-foreground">DEPOSIT TO</span>
-                <span>ZEBRA</span>
+              <div className="space-y-3 text-xs">
+                {quote.steps.map((step, i) => (
+                  <div key={i}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-4 h-4 border border-border flex items-center justify-center text-[8px]">
+                        {i + 1}
+                      </span>
+                      <span className="text-muted-foreground">
+                        {step.type.toUpperCase()} VIA
+                      </span>
+                      <span>{step.tool.toUpperCase()}</span>
+                    </div>
+                    {i < quote.steps.length - 1 && (
+                      <div className="ml-2 h-4 border-l border-border" />
+                    )}
+                  </div>
+                ))}
+                <div className="flex items-center gap-2">
+                  <span className="w-4 h-4 border border-border flex items-center justify-center text-[8px]">
+                    {quote.steps.length + 1}
+                  </span>
+                  <span className="text-muted-foreground">RECEIVE ON</span>
+                  <span>SUI</span>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* SUMMARY */}
           <div className="p-6 border-b border-border space-y-3">
             <div className="flex items-center justify-between text-xs">
               <span className="tracking-widest text-muted-foreground">YOU RECEIVE</span>
-              <span className="font-mono">~${estimatedReceive} USDC</span>
+              <span className="font-mono">
+                {estimatedOutput ? `~${estimatedOutput} USDC` : "\u2014"}
+              </span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="tracking-widest text-muted-foreground">EST. TIME</span>
-              <span>~3 MIN</span>
+              <span>{quote ? estimatedTime : "\u2014"}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="tracking-widest text-muted-foreground">GAS</span>
-              <span className="font-mono">~$2.50</span>
+              <span className="font-mono">
+                {quote ? `~$${quote.gasCostUSD}` : "\u2014"}
+              </span>
             </div>
           </div>
 
@@ -191,11 +260,69 @@ export default function DepositPage() {
             </div>
           </div>
 
+          {/* ERROR */}
+          {error && (
+            <div className="px-6 py-3 border-b border-border">
+              <div className="text-[10px] tracking-wide text-red-500 border border-red-500/20 p-3">
+                {error}
+              </div>
+            </div>
+          )}
+
+          {/* SUCCESS */}
+          {status === "success" && (
+            <div className="px-6 py-3 border-b border-border">
+              <div className="text-[10px] tracking-wide text-green-500 border border-green-500/20 p-3">
+                BRIDGE SUBMITTED SUCCESSFULLY
+                {txHash && (
+                  <span className="block mt-1 font-mono opacity-60">
+                    TX: {txHash.slice(0, 10)}...{txHash.slice(-6)}
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* SUBMIT */}
           <div className="p-6">
-            <Button className="w-full" size="lg">
-              DEPOSIT
-            </Button>
+            {!isConnected ? (
+              <Button className="w-full" size="lg" disabled>
+                CONNECT WALLET
+              </Button>
+            ) : status === "idle" || status === "error" ? (
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleGetQuote}
+                disabled={!amount || parseFloat(amount) <= 0}
+              >
+                GET QUOTE
+              </Button>
+            ) : status === "quoting" ? (
+              <Button className="w-full" size="lg" disabled>
+                FETCHING QUOTE...
+              </Button>
+            ) : status === "quoted" ? (
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={handleExecuteBridge}
+              >
+                BRIDGE {amount} {fromToken} TO SUI
+              </Button>
+            ) : status === "executing" ? (
+              <Button className="w-full" size="lg" disabled>
+                BRIDGING...
+              </Button>
+            ) : (
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => { setStatus("idle"); setQuote(null); setAmount(""); }}
+              >
+                BRIDGE AGAIN
+              </Button>
+            )}
           </div>
         </div>
 
@@ -203,27 +330,25 @@ export default function DepositPage() {
         <div className="mt-8 border border-border">
           <div className="p-4 border-b border-border">
             <span className="text-xs tracking-widest text-muted-foreground">
-              YOUR BALANCE
+              YOUR SUI BALANCE
             </span>
           </div>
           <div className="p-6 space-y-4">
             <div className="flex items-center justify-between">
               <span className="text-xs tracking-widest text-muted-foreground">
-                TRADING BALANCE
+                SUI
               </span>
-              <span className="font-mono text-sm">1,500.00 USDC</span>
+              <span className="font-mono text-sm">
+                {isConnected ? `${balance.sui} SUI` : "\u2014"}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs tracking-widest text-muted-foreground">
-                LOCKED IN ORDERS
+                USDC
               </span>
-              <span className="font-mono text-sm">500.00 USDC</span>
-            </div>
-            <div className="flex items-center justify-between pt-4 border-t border-border">
-              <span className="text-xs tracking-widest">
-                AVAILABLE
+              <span className="font-mono text-sm">
+                {isConnected ? `${balance.usdc} USDC` : "\u2014"}
               </span>
-              <span className="font-mono text-sm">1,000.00 USDC</span>
             </div>
           </div>
         </div>
@@ -231,4 +356,3 @@ export default function DepositPage() {
     </div>
   );
 }
-
