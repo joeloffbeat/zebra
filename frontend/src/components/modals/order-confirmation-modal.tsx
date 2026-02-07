@@ -62,37 +62,37 @@ export function OrderConfirmationModal({
           {/* SWAP VISUALIZATION */}
           <div className="flex items-center justify-center gap-6">
             {/* FROM ASSET */}
-            <div className="text-center space-y-2">
-              <div className="w-14 h-14 mx-auto flex items-center justify-center">
+            <div className="text-center space-y-1">
+              <div className="w-8 h-8 mx-auto flex items-center justify-center">
                 <Image
                   src={fromAsset === "SUI" ? "/assets/sui.svg" : "/assets/usdc.svg"}
                   alt={fromAsset}
-                  width={48}
-                  height={48}
-                  className="w-12 h-12"
+                  width={28}
+                  height={28}
+                  className="w-7 h-7"
                 />
               </div>
-              <p className="font-mono text-sm">{fromAmount}</p>
+              <p className="font-mono text-xs">{fromAmount}</p>
               <p className="text-[10px] tracking-widest text-muted-foreground">{fromAsset}</p>
             </div>
 
             {/* ARROW */}
             <div className="text-muted-foreground">
-              <span className="text-2xl">→</span>
+              <span className="text-lg">→</span>
             </div>
 
             {/* TO ASSET */}
-            <div className="text-center space-y-2">
-              <div className="w-14 h-14 mx-auto flex items-center justify-center">
+            <div className="text-center space-y-1">
+              <div className="w-8 h-8 mx-auto flex items-center justify-center">
                 <Image
                   src={toAsset === "SUI" ? "/assets/sui.svg" : "/assets/usdc.svg"}
                   alt={toAsset}
-                  width={48}
-                  height={48}
-                  className="w-12 h-12"
+                  width={28}
+                  height={28}
+                  className="w-7 h-7"
                 />
               </div>
-              <p className="font-mono text-sm">{toAmount}</p>
+              <p className="font-mono text-xs">{toAmount}</p>
               <p className="text-[10px] tracking-widest text-muted-foreground">{toAsset}</p>
             </div>
           </div>
