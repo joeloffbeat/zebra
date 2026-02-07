@@ -825,7 +825,7 @@ export default function PitchPage() {
                 },
                 {
                   title: "SUI SEAL",
-                  desc: "THRESHOLD ENCRYPTION WITH 2-OF-3 KEY SERVERS ON TESTNET. ENCRYPTION TIED TO A SEAL ALLOWLIST — ONLY AUTHORIZED TEE INSTANCES CAN DECRYPT. NO CENTRALIZED KEY SERVER.",
+                  desc: "THRESHOLD ENCRYPTION WITH 2-OF-3 KEY SERVERS ON MAINNET. ENCRYPTION TIED TO A SEAL ALLOWLIST — ONLY AUTHORIZED TEE INSTANCES CAN DECRYPT. NO CENTRALIZED KEY SERVER.",
                   tag: "ENCRYPTION",
                 },
                 {
