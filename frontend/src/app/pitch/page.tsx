@@ -109,13 +109,13 @@ function Slide({
     <section
       ref={ref}
       id={id}
-      className={`min-h-screen flex items-center justify-center px-6 py-24 ${
+      className={`min-h-screen flex items-center justify-center px-8 py-28 ${
         inverted
           ? "bg-foreground text-background"
           : "bg-background text-foreground"
       } ${className}`}
     >
-      <div className="w-full max-w-5xl mx-auto">{children(isVisible)}</div>
+      <div className="w-full max-w-6xl mx-auto">{children(isVisible)}</div>
     </section>
   );
 }
@@ -142,7 +142,7 @@ export default function PitchPage() {
       </div>
 
       {/* ── Side navigation dots ── */}
-      <nav className="fixed right-6 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col items-center gap-3">
+      <nav className="fixed right-8 top-1/2 -translate-y-1/2 z-50 hidden md:flex flex-col items-center gap-3">
         {SLIDE_IDS.map((id, i) => (
           <button
             key={id}
@@ -158,8 +158,8 @@ export default function PitchPage() {
       </nav>
 
       {/* ── Slide counter ── */}
-      <div className="fixed left-6 bottom-6 z-50 hidden md:block">
-        <span className="text-[10px] tracking-widest text-muted-foreground font-mono">
+      <div className="fixed left-8 bottom-8 z-50 hidden md:block">
+        <span className="text-[13px] tracking-widest text-muted-foreground font-mono">
           {String(activeSlide + 1).padStart(2, "0")} / {SLIDE_IDS.length}
         </span>
       </div>
@@ -169,38 +169,38 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="title" onInView={() => setActiveSlide(0)}>
         {(isVisible) => (
-          <div className="text-center space-y-8">
+          <div className="text-center space-y-10">
             <FadeIn isVisible={isVisible} delay={0}>
-              <div className="text-[10px] tracking-[0.3em] text-muted-foreground">
+              <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
                 ETHGLOBAL HACKMONEY 2026
               </div>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={200}>
-              <h1 className="text-5xl md:text-[80px] tracking-[0.2em] font-display leading-none">
+              <h1 className="text-[80px] md:text-[130px] tracking-[0.2em] font-display leading-none">
                 ZEBRA
               </h1>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={400}>
-              <div className="w-16 h-px bg-foreground mx-auto" />
+              <div className="w-20 h-px bg-foreground mx-auto" />
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={600}>
-              <p className="text-sm md:text-lg tracking-[0.15em]">
+              <p className="text-[22px] md:text-[28px] tracking-[0.15em]">
                 THE FIRST ZK DARK POOL ON SUI
               </p>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={800}>
-              <p className="text-[10px] tracking-widest text-muted-foreground">
+              <p className="text-[14px] tracking-widest text-muted-foreground">
                 PRIVATE LIMIT ORDERS · ENCRYPTED SETTLEMENT · ZERO ON-CHAIN LEAKAGE
               </p>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={1000}>
-              <div className="pt-8">
-                <span className="text-[10px] tracking-widest text-muted-foreground animate-pulse">
+              <div className="pt-10">
+                <span className="text-[13px] tracking-widest text-muted-foreground animate-pulse">
                   SCROLL TO EXPLORE
                 </span>
               </div>
@@ -214,16 +214,16 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="problem" inverted onInView={() => setActiveSlide(1)}>
         {(isVisible) => (
-          <div className="space-y-12">
-            <div className="space-y-4">
+          <div className="space-y-14">
+            <div className="space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
-                <div className="text-[10px] tracking-[0.3em] opacity-50">
+                <div className="text-[15px] tracking-[0.3em] opacity-50">
                   THE PROBLEM
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={150}>
-                <h2 className="text-2xl md:text-4xl tracking-widest font-display leading-tight">
+                <h2 className="text-[36px] md:text-[56px] tracking-widest font-display leading-tight">
                   EVERY TRADE ON SUI
                   <br />
                   IS FULLY TRANSPARENT
@@ -231,7 +231,7 @@ export default function PitchPage() {
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={300}>
-                <p className="text-xs tracking-wide opacity-60 leading-relaxed max-w-2xl">
+                <p className="text-[16px] tracking-wide opacity-60 leading-relaxed max-w-3xl">
                   WHEN YOU PLACE AN ORDER ON DEEPBOOK, YOUR LIMIT PRICE, ORDER SIZE,
                   WALLET ADDRESS, AND TRADE HISTORY ARE VISIBLE TO THE ENTIRE NETWORK.
                 </p>
@@ -240,12 +240,12 @@ export default function PitchPage() {
 
             <div className="grid md:grid-cols-3 gap-6">
               <FadeIn isVisible={isVisible} delay={450}>
-                <div className="border border-current/20 p-6 space-y-3">
-                  <div className="text-xs tracking-widest opacity-40">01</div>
-                  <h3 className="text-sm tracking-widest">
+                <div className="border border-current/20 p-8 space-y-4">
+                  <div className="text-[16px] tracking-widest opacity-40">01</div>
+                  <h3 className="text-[18px] tracking-widest">
                     ORDER BOOK EXPOSURE
                   </h3>
-                  <p className="text-[10px] tracking-wide opacity-50 leading-relaxed">
+                  <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
                     YOUR LIMIT PRICE, ORDER SIZE, AND WALLET ADDRESS ARE VISIBLE
                     TO EVERYONE ON THE NETWORK. MEV BOTS EXPLOIT THIS IN REAL-TIME.
                   </p>
@@ -253,10 +253,10 @@ export default function PitchPage() {
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={600}>
-                <div className="border border-current/20 p-6 space-y-3">
-                  <div className="text-xs tracking-widest opacity-40">02</div>
-                  <h3 className="text-sm tracking-widest">MARKET IMPACT</h3>
-                  <p className="text-[10px] tracking-wide opacity-50 leading-relaxed">
+                <div className="border border-current/20 p-8 space-y-4">
+                  <div className="text-[16px] tracking-widest opacity-40">02</div>
+                  <h3 className="text-[18px] tracking-widest">MARKET IMPACT</h3>
+                  <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
                     A WHALE PLACING A LARGE SELL ORDER MOVES THE MARKET BEFORE IT
                     FILLS. THE PRICE SHIFTS AGAINST YOU BEFORE EXECUTION.
                   </p>
@@ -264,10 +264,10 @@ export default function PitchPage() {
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={750}>
-                <div className="border border-current/20 p-6 space-y-3">
-                  <div className="text-xs tracking-widest opacity-40">03</div>
-                  <h3 className="text-sm tracking-widest">STRATEGY LEAKAGE</h3>
-                  <p className="text-[10px] tracking-wide opacity-50 leading-relaxed">
+                <div className="border border-current/20 p-8 space-y-4">
+                  <div className="text-[16px] tracking-widest opacity-40">03</div>
+                  <h3 className="text-[18px] tracking-widest">STRATEGY LEAKAGE</h3>
+                  <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
                     YOUR ON-CHAIN TRADING HISTORY IS PUBLIC. COMPETITORS TRACK YOUR
                     ADDRESSES, COPY YOUR STRATEGIES, AND TRADE AGAINST YOU.
                   </p>
@@ -285,37 +285,37 @@ export default function PitchPage() {
         {(isVisible) => (
           <div className="space-y-16">
             <FadeIn isVisible={isVisible} delay={0}>
-              <div className="text-[10px] tracking-[0.3em] text-muted-foreground text-center">
+              <div className="text-[15px] tracking-[0.3em] text-muted-foreground text-center">
                 THE OPPORTUNITY
               </div>
             </FadeIn>
 
             <div className="grid md:grid-cols-2 gap-12 md:gap-0 md:divide-x divide-border">
               <FadeIn isVisible={isVisible} delay={200}>
-                <div className="text-center space-y-4 md:pr-12">
-                  <div className="text-5xl md:text-[72px] tracking-widest font-display leading-none">
+                <div className="text-center space-y-5 md:pr-16">
+                  <div className="text-[72px] md:text-[100px] tracking-widest font-display leading-none">
                     $3T+
                   </div>
-                  <div className="w-8 h-px bg-foreground mx-auto" />
-                  <p className="text-xs tracking-widest text-muted-foreground">
+                  <div className="w-10 h-px bg-foreground mx-auto" />
+                  <p className="text-[16px] tracking-widest text-muted-foreground">
                     ANNUAL VOLUME IN TRADFI DARK POOLS
                   </p>
-                  <p className="text-[10px] tracking-wide text-muted-foreground opacity-60">
+                  <p className="text-[14px] tracking-wide text-muted-foreground opacity-60">
                     IEX · LIQUIDNET · CROSSFINDER · SIGMA X
                   </p>
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={500}>
-                <div className="text-center space-y-4 md:pl-12">
-                  <div className="text-5xl md:text-[72px] tracking-widest font-display leading-none">
+                <div className="text-center space-y-5 md:pl-16">
+                  <div className="text-[72px] md:text-[100px] tracking-widest font-display leading-none">
                     0
                   </div>
-                  <div className="w-8 h-px bg-foreground mx-auto" />
-                  <p className="text-xs tracking-widest text-muted-foreground">
+                  <div className="w-10 h-px bg-foreground mx-auto" />
+                  <p className="text-[16px] tracking-widest text-muted-foreground">
                     PRIVACY DEXS ON SUI
                   </p>
-                  <p className="text-[10px] tracking-wide text-muted-foreground opacity-60">
+                  <p className="text-[14px] tracking-wide text-muted-foreground opacity-60">
                     DEEPBOOK · CETUS · TURBOS · KRIYA — ALL TRANSPARENT
                   </p>
                 </div>
@@ -323,7 +323,7 @@ export default function PitchPage() {
             </div>
 
             <FadeIn isVisible={isVisible} delay={700}>
-              <p className="text-center text-xs tracking-widest text-muted-foreground">
+              <p className="text-center text-[16px] tracking-widest text-muted-foreground">
                 TRADITIONAL FINANCE SOLVED THIS DECADES AGO. SUI HAS NO EQUIVALENT.
               </p>
             </FadeIn>
@@ -336,25 +336,25 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="solution" onInView={() => setActiveSlide(3)}>
         {(isVisible) => (
-          <div className="text-center space-y-10">
+          <div className="text-center space-y-12">
             <FadeIn isVisible={isVisible} delay={0}>
-              <div className="text-[10px] tracking-[0.3em] text-muted-foreground">
+              <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
                 THE SOLUTION
               </div>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={200}>
-              <h2 className="text-3xl md:text-5xl tracking-[0.15em] font-display leading-tight">
+              <h2 className="text-[40px] md:text-[64px] tracking-[0.15em] font-display leading-tight">
                 HIDE IN THE HERD
               </h2>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={400}>
-              <div className="w-16 h-px bg-foreground mx-auto" />
+              <div className="w-20 h-px bg-foreground mx-auto" />
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={600}>
-              <p className="text-xs md:text-sm tracking-wide text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+              <p className="text-[16px] md:text-[18px] tracking-wide text-muted-foreground leading-relaxed max-w-3xl mx-auto">
                 ZEBRA ENABLES PRIVATE LIMIT ORDERS WHERE PRICES ARE HIDDEN, MATCHING
                 HAPPENS INSIDE A SECURE ENCLAVE, AND SETTLEMENT ROUTES FUNDS TO
                 ENCRYPTED RECEIVER ADDRESSES — BREAKING EVERY LINK BETWEEN ORDER
@@ -364,31 +364,31 @@ export default function PitchPage() {
 
             <FadeIn isVisible={isVisible} delay={800}>
               <div className="flex flex-col md:flex-row items-center justify-center gap-6 pt-4">
-                <div className="border border-border px-6 py-3 space-y-1">
-                  <div className="text-[10px] tracking-widest text-muted-foreground">
+                <div className="border border-border px-8 py-4 space-y-2">
+                  <div className="text-[13px] tracking-widest text-muted-foreground">
                     INPUT
                   </div>
-                  <div className="text-xs tracking-widest">
+                  <div className="text-[16px] tracking-widest">
                     ENCRYPTED ORDER + ZK PROOF
                   </div>
                 </div>
-                <div className="text-muted-foreground text-lg hidden md:block">→</div>
-                <div className="text-muted-foreground text-lg md:hidden">↓</div>
-                <div className="border border-border px-6 py-3 space-y-1">
-                  <div className="text-[10px] tracking-widest text-muted-foreground">
+                <div className="text-muted-foreground text-2xl hidden md:block">→</div>
+                <div className="text-muted-foreground text-2xl md:hidden">↓</div>
+                <div className="border border-border px-8 py-4 space-y-2">
+                  <div className="text-[13px] tracking-widest text-muted-foreground">
                     ON-CHAIN
                   </div>
-                  <div className="text-xs tracking-widest">
+                  <div className="text-[16px] tracking-widest">
                     COMMITMENT HASH ONLY
                   </div>
                 </div>
-                <div className="text-muted-foreground text-lg hidden md:block">→</div>
-                <div className="text-muted-foreground text-lg md:hidden">↓</div>
-                <div className="border border-border px-6 py-3 space-y-1">
-                  <div className="text-[10px] tracking-widest text-muted-foreground">
+                <div className="text-muted-foreground text-2xl hidden md:block">→</div>
+                <div className="text-muted-foreground text-2xl md:hidden">↓</div>
+                <div className="border border-border px-8 py-4 space-y-2">
+                  <div className="text-[13px] tracking-widest text-muted-foreground">
                     OUTPUT
                   </div>
-                  <div className="text-xs tracking-widest">
+                  <div className="text-[16px] tracking-widest">
                     FUNDS AT UNRELATED ADDRESSES
                   </div>
                 </div>
@@ -403,22 +403,22 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="pipeline" inverted onInView={() => setActiveSlide(4)}>
         {(isVisible) => (
-          <div className="space-y-12">
-            <div className="text-center space-y-4">
+          <div className="space-y-14">
+            <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
-                <div className="text-[10px] tracking-[0.3em] opacity-50">
+                <div className="text-[15px] tracking-[0.3em] opacity-50">
                   THE PIPELINE
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={150}>
-                <h2 className="text-2xl md:text-4xl tracking-widest font-display">
+                <h2 className="text-[36px] md:text-[56px] tracking-widest font-display">
                   SIX PRIVACY LAYERS
                 </h2>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={300}>
-                <p className="text-[10px] tracking-wide opacity-50 max-w-xl mx-auto">
+                <p className="text-[14px] tracking-wide opacity-50 max-w-2xl mx-auto leading-relaxed">
                   EACH LAYER ADDRESSES A DIFFERENT PRIVACY VECTOR. TOGETHER THEY
                   COVER VALIDITY, CONFIDENTIALITY, EXECUTION, OPACITY, LIQUIDITY,
                   AND UNLINKABILITY.
@@ -426,7 +426,7 @@ export default function PitchPage() {
               </FadeIn>
             </div>
 
-            <div className="grid md:grid-cols-3 gap-4">
+            <div className="grid md:grid-cols-3 gap-5">
               {[
                 {
                   num: "01",
@@ -466,17 +466,17 @@ export default function PitchPage() {
                 },
               ].map((layer, i) => (
                 <FadeIn key={layer.num} isVisible={isVisible} delay={450 + i * 100}>
-                  <div className="border border-current/20 p-5 space-y-3 h-full">
+                  <div className="border border-current/20 p-6 space-y-4 h-full">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs tracking-widest opacity-40">
+                      <span className="text-[16px] tracking-widest opacity-40">
                         {layer.num}
                       </span>
-                      <span className="text-[9px] tracking-widest opacity-30 border border-current/20 px-2 py-0.5">
+                      <span className="text-[12px] tracking-widest opacity-30 border border-current/20 px-3 py-1">
                         {layer.tag}
                       </span>
                     </div>
-                    <h3 className="text-sm tracking-widest">{layer.title}</h3>
-                    <p className="text-[10px] tracking-wide opacity-50 leading-relaxed">
+                    <h3 className="text-[18px] tracking-widest">{layer.title}</h3>
+                    <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
                       {layer.desc}
                     </p>
                   </div>
@@ -492,16 +492,16 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="architecture" onInView={() => setActiveSlide(5)}>
         {(isVisible) => (
-          <div className="space-y-12">
-            <div className="text-center space-y-4">
+          <div className="space-y-14">
+            <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
-                <div className="text-[10px] tracking-[0.3em] text-muted-foreground">
+                <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
                   ARCHITECTURE
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={150}>
-                <h2 className="text-2xl md:text-4xl tracking-widest font-display">
+                <h2 className="text-[36px] md:text-[56px] tracking-widest font-display">
                   FULL SUI-NATIVE STACK
                 </h2>
               </FadeIn>
@@ -511,30 +511,30 @@ export default function PitchPage() {
             <div className="space-y-6">
               {/* Browser layer */}
               <FadeIn isVisible={isVisible} delay={300}>
-                <div className="border border-border p-6">
-                  <div className="text-[10px] tracking-[0.3em] text-muted-foreground mb-4">
+                <div className="border border-border p-8">
+                  <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
                     BROWSER
                   </div>
                   <div className="grid grid-cols-3 gap-4">
-                    <div className="border border-border/50 p-3 text-center">
-                      <div className="text-[10px] tracking-widest">ZK PROOF</div>
-                      <div className="text-[9px] tracking-wide text-muted-foreground mt-1">
+                    <div className="border border-border/50 p-4 text-center">
+                      <div className="text-[15px] tracking-widest">ZK PROOF</div>
+                      <div className="text-[13px] tracking-wide text-muted-foreground mt-2">
                         SNARKJS · CIRCOM
                       </div>
                     </div>
-                    <div className="border border-border/50 p-3 text-center">
-                      <div className="text-[10px] tracking-widest">
+                    <div className="border border-border/50 p-4 text-center">
+                      <div className="text-[15px] tracking-widest">
                         SEAL ENCRYPT
                       </div>
-                      <div className="text-[9px] tracking-wide text-muted-foreground mt-1">
+                      <div className="text-[13px] tracking-wide text-muted-foreground mt-2">
                         SUI SEAL SDK
                       </div>
                     </div>
-                    <div className="border border-border/50 p-3 text-center">
-                      <div className="text-[10px] tracking-widest">
+                    <div className="border border-border/50 p-4 text-center">
+                      <div className="text-[15px] tracking-widest">
                         WALLET
                       </div>
-                      <div className="text-[9px] tracking-wide text-muted-foreground mt-1">
+                      <div className="text-[13px] tracking-wide text-muted-foreground mt-2">
                         DAPP-KIT
                       </div>
                     </div>
@@ -546,12 +546,12 @@ export default function PitchPage() {
               <FadeIn isVisible={isVisible} delay={450}>
                 <div className="flex justify-center">
                   <div className="flex flex-col items-center gap-1">
-                    <div className="w-px h-4 bg-border" />
-                    <div className="text-[10px] tracking-widest text-muted-foreground">
+                    <div className="w-px h-5 bg-border" />
+                    <div className="text-[13px] tracking-widest text-muted-foreground">
                       SUBMIT TX
                     </div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="text-muted-foreground">↓</div>
+                    <div className="w-px h-5 bg-border" />
+                    <div className="text-muted-foreground text-lg">↓</div>
                   </div>
                 </div>
               </FadeIn>
@@ -559,8 +559,8 @@ export default function PitchPage() {
               {/* On-chain layer */}
               <FadeIn isVisible={isVisible} delay={550}>
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="border border-border p-6">
-                    <div className="text-[10px] tracking-[0.3em] text-muted-foreground mb-4">
+                  <div className="border border-border p-8">
+                    <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
                       DARK POOL CONTRACT (MOVE)
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -572,7 +572,7 @@ export default function PitchPage() {
                       ].map((item) => (
                         <div
                           key={item}
-                          className="border border-border/50 p-2 text-center text-[9px] tracking-widest"
+                          className="border border-border/50 p-3 text-center text-[14px] tracking-widest"
                         >
                           {item}
                         </div>
@@ -580,8 +580,8 @@ export default function PitchPage() {
                     </div>
                   </div>
 
-                  <div className="border border-border p-6">
-                    <div className="text-[10px] tracking-[0.3em] text-muted-foreground mb-4">
+                  <div className="border border-border p-8">
+                    <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
                       DEEPBOOK V3
                     </div>
                     <div className="grid grid-cols-2 gap-3">
@@ -593,7 +593,7 @@ export default function PitchPage() {
                       ].map((item) => (
                         <div
                           key={item}
-                          className="border border-border/50 p-2 text-center text-[9px] tracking-widest"
+                          className="border border-border/50 p-3 text-center text-[14px] tracking-widest"
                         >
                           {item}
                         </div>
@@ -607,21 +607,21 @@ export default function PitchPage() {
               <FadeIn isVisible={isVisible} delay={650}>
                 <div className="flex justify-center">
                   <div className="flex flex-col items-center gap-1">
-                    <div className="text-muted-foreground">↑</div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="text-[10px] tracking-widest text-muted-foreground">
+                    <div className="text-muted-foreground text-lg">↑</div>
+                    <div className="w-px h-5 bg-border" />
+                    <div className="text-[13px] tracking-widest text-muted-foreground">
                       EVENTS · PTBS
                     </div>
-                    <div className="w-px h-4 bg-border" />
-                    <div className="text-muted-foreground">↓</div>
+                    <div className="w-px h-5 bg-border" />
+                    <div className="text-muted-foreground text-lg">↓</div>
                   </div>
                 </div>
               </FadeIn>
 
               {/* TEE layer */}
               <FadeIn isVisible={isVisible} delay={750}>
-                <div className="border border-border p-6">
-                  <div className="text-[10px] tracking-[0.3em] text-muted-foreground mb-4">
+                <div className="border border-border p-8">
+                  <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
                     TEE MATCHING ENGINE (NAUTILUS)
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -633,7 +633,7 @@ export default function PitchPage() {
                     ].map((item) => (
                       <div
                         key={item}
-                        className="border border-border/50 p-2 text-center text-[9px] tracking-widest"
+                        className="border border-border/50 p-3 text-center text-[14px] tracking-widest"
                       >
                         {item}
                       </div>
@@ -651,16 +651,16 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="receivers" inverted onInView={() => setActiveSlide(6)}>
         {(isVisible) => (
-          <div className="space-y-12">
-            <div className="space-y-4">
+          <div className="space-y-14">
+            <div className="space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
-                <div className="text-[10px] tracking-[0.3em] opacity-50">
+                <div className="text-[15px] tracking-[0.3em] opacity-50">
                   CORE DIFFERENTIATOR
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={150}>
-                <h2 className="text-2xl md:text-4xl tracking-widest font-display leading-tight">
+                <h2 className="text-[36px] md:text-[56px] tracking-widest font-display leading-tight">
                   ENCRYPTED RECEIVER
                   <br />
                   ROUTING
@@ -668,7 +668,7 @@ export default function PitchPage() {
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={300}>
-                <p className="text-xs tracking-wide opacity-60 leading-relaxed max-w-2xl">
+                <p className="text-[16px] tracking-wide opacity-60 leading-relaxed max-w-3xl">
                   MOST PRIVACY DEX DESIGNS STOP AT HIDING THE ORDER. BUT SETTLEMENT
                   STILL REVEALS THE RECIPIENT. ZEBRA BREAKS THIS ENTIRELY.
                 </p>
@@ -678,29 +678,29 @@ export default function PitchPage() {
             {/* Before / After comparison */}
             <div className="grid md:grid-cols-2 gap-8">
               <FadeIn isVisible={isVisible} delay={450}>
-                <div className="border border-current/20 p-6 space-y-6">
-                  <div className="text-[10px] tracking-[0.3em] opacity-40">
+                <div className="border border-current/20 p-8 space-y-6">
+                  <div className="text-[14px] tracking-[0.3em] opacity-40">
                     WITHOUT ZEBRA
                   </div>
 
-                  <div className="space-y-3 font-mono">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] tracking-wide border border-current/20 px-2 py-1">
+                  <div className="space-y-4 font-mono">
+                    <div className="flex items-center gap-4">
+                      <span className="text-[15px] tracking-wide border border-current/20 px-3 py-1.5">
                         0xAAA
                       </span>
-                      <span className="text-xs opacity-40">PLACES ORDER</span>
+                      <span className="text-[15px] opacity-40">PLACES ORDER</span>
                     </div>
-                    <div className="text-center text-xs opacity-30">↓</div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] tracking-wide border border-current/20 px-2 py-1">
+                    <div className="text-center text-[16px] opacity-30">↓</div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[15px] tracking-wide border border-current/20 px-3 py-1.5">
                         0xAAA
                       </span>
-                      <span className="text-xs opacity-40">RECEIVES FUNDS</span>
+                      <span className="text-[15px] opacity-40">RECEIVES FUNDS</span>
                     </div>
                   </div>
 
-                  <div className="border-t border-current/10 pt-3">
-                    <span className="text-[10px] tracking-widest opacity-40">
+                  <div className="border-t border-current/10 pt-4">
+                    <span className="text-[14px] tracking-widest opacity-40">
                       TRIVIALLY LINKED
                     </span>
                   </div>
@@ -708,35 +708,35 @@ export default function PitchPage() {
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={600}>
-                <div className="border border-current/40 p-6 space-y-6">
-                  <div className="text-[10px] tracking-[0.3em]">
+                <div className="border border-current/40 p-8 space-y-6">
+                  <div className="text-[14px] tracking-[0.3em]">
                     WITH ZEBRA
                   </div>
 
-                  <div className="space-y-3 font-mono">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] tracking-wide border border-current/30 px-2 py-1">
+                  <div className="space-y-4 font-mono">
+                    <div className="flex items-center gap-4">
+                      <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
                         0xAAA
                       </span>
-                      <span className="text-xs opacity-50">PLACES ORDER</span>
+                      <span className="text-[15px] opacity-50">PLACES ORDER</span>
                     </div>
-                    <div className="text-center text-xs opacity-30">↓</div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] tracking-wide border border-current/30 px-2 py-1">
+                    <div className="text-center text-[16px] opacity-30">↓</div>
+                    <div className="flex items-center gap-4">
+                      <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
                         0xBBB
                       </span>
-                      <span className="text-xs opacity-50">RECEIVES 60%</span>
+                      <span className="text-[15px] opacity-50">RECEIVES 60%</span>
                     </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[10px] tracking-wide border border-current/30 px-2 py-1">
+                    <div className="flex items-center gap-4">
+                      <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
                         0xCCC
                       </span>
-                      <span className="text-xs opacity-50">RECEIVES 40%</span>
+                      <span className="text-[15px] opacity-50">RECEIVES 40%</span>
                     </div>
                   </div>
 
-                  <div className="border-t border-current/20 pt-3">
-                    <span className="text-[10px] tracking-widest">
+                  <div className="border-t border-current/20 pt-4">
+                    <span className="text-[14px] tracking-widest">
                       NO VISIBLE LINK
                     </span>
                   </div>
@@ -745,7 +745,7 @@ export default function PitchPage() {
             </div>
 
             <FadeIn isVisible={isVisible} delay={750}>
-              <p className="text-[10px] tracking-wide opacity-50 leading-relaxed max-w-2xl">
+              <p className="text-[14px] tracking-wide opacity-50 leading-relaxed max-w-3xl">
                 RECEIVER ADDRESSES AND SPLIT PERCENTAGES LIVE INSIDE THE
                 SEAL-ENCRYPTED PAYLOAD. THE TEE READS THEM AT SETTLEMENT AND
                 ROUTES FUNDS ACCORDINGLY. ON-CHAIN, THERE IS NO CONNECTION
@@ -761,22 +761,22 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="integration" onInView={() => setActiveSlide(7)}>
         {(isVisible) => (
-          <div className="space-y-12">
-            <div className="text-center space-y-4">
+          <div className="space-y-14">
+            <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
-                <div className="text-[10px] tracking-[0.3em] text-muted-foreground">
+                <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
                   ECOSYSTEM
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={150}>
-                <h2 className="text-2xl md:text-4xl tracking-widest font-display">
+                <h2 className="text-[36px] md:text-[56px] tracking-widest font-display">
                   DEEP SUI INTEGRATION
                 </h2>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={300}>
-                <p className="text-[10px] tracking-wide text-muted-foreground max-w-xl mx-auto">
+                <p className="text-[14px] tracking-wide text-muted-foreground max-w-2xl mx-auto leading-relaxed">
                   EVERY CORE COMPONENT LEVERAGES A SUI-NATIVE PRIMITIVE. NO
                   EXTERNAL CHAINS, NO BRIDGES, NO THIRD-PARTY INFRASTRUCTURE.
                 </p>
@@ -807,14 +807,14 @@ export default function PitchPage() {
                 },
               ].map((item, i) => (
                 <FadeIn key={item.title} isVisible={isVisible} delay={450 + i * 150}>
-                  <div className="border border-border p-6 space-y-3 h-full">
+                  <div className="border border-border p-8 space-y-4 h-full">
                     <div className="flex items-center justify-between">
-                      <h3 className="text-sm tracking-widest">{item.title}</h3>
-                      <span className="text-[9px] tracking-widest text-muted-foreground border border-border px-2 py-0.5">
+                      <h3 className="text-[18px] tracking-widest">{item.title}</h3>
+                      <span className="text-[12px] tracking-widest text-muted-foreground border border-border px-3 py-1">
                         {item.tag}
                       </span>
                     </div>
-                    <p className="text-[10px] tracking-wide text-muted-foreground leading-relaxed">
+                    <p className="text-[14px] tracking-wide text-muted-foreground leading-relaxed">
                       {item.desc}
                     </p>
                   </div>
@@ -830,22 +830,22 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="novel" inverted onInView={() => setActiveSlide(8)}>
         {(isVisible) => (
-          <div className="space-y-12">
-            <div className="space-y-4">
+          <div className="space-y-14">
+            <div className="space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
-                <div className="text-[10px] tracking-[0.3em] opacity-50">
+                <div className="text-[15px] tracking-[0.3em] opacity-50">
                   INNOVATION
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={150}>
-                <h2 className="text-2xl md:text-4xl tracking-widest font-display">
+                <h2 className="text-[36px] md:text-[56px] tracking-widest font-display">
                   {"WHAT'S NOVEL"}
                 </h2>
               </FadeIn>
             </div>
 
-            <div className="space-y-6">
+            <div className="space-y-8">
               {[
                 {
                   title: "FIRST PRIVACY DEX ON SUI",
@@ -869,13 +869,13 @@ export default function PitchPage() {
                 },
               ].map((item, i) => (
                 <FadeIn key={item.title} isVisible={isVisible} delay={300 + i * 120}>
-                  <div className="flex gap-6 items-start">
-                    <div className="text-lg tracking-widest opacity-30 pt-0.5 shrink-0 w-8 font-mono">
+                  <div className="flex gap-8 items-start">
+                    <div className="text-[24px] tracking-widest opacity-30 pt-0.5 shrink-0 w-10 font-mono">
                       {String(i + 1).padStart(2, "0")}
                     </div>
-                    <div className="border-l border-current/20 pl-6 space-y-2">
-                      <h3 className="text-sm tracking-widest">{item.title}</h3>
-                      <p className="text-[10px] tracking-wide opacity-50 leading-relaxed max-w-2xl">
+                    <div className="border-l border-current/20 pl-8 space-y-3">
+                      <h3 className="text-[18px] tracking-widest">{item.title}</h3>
+                      <p className="text-[14px] tracking-wide opacity-50 leading-relaxed max-w-3xl">
                         {item.desc}
                       </p>
                     </div>
@@ -892,22 +892,22 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="demo" onInView={() => setActiveSlide(9)}>
         {(isVisible) => (
-          <div className="space-y-12">
-            <div className="text-center space-y-4">
+          <div className="space-y-14">
+            <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
-                <div className="text-[10px] tracking-[0.3em] text-muted-foreground">
+                <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
                   LIVE DEMO
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={150}>
-                <h2 className="text-2xl md:text-4xl tracking-widest font-display">
+                <h2 className="text-[36px] md:text-[56px] tracking-widest font-display">
                   A COMPLETE PRIVATE TRADE
                 </h2>
               </FadeIn>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-x-8 gap-y-6">
+            <div className="grid md:grid-cols-2 gap-x-10 gap-y-8">
               {[
                 {
                   step: "01",
@@ -941,13 +941,13 @@ export default function PitchPage() {
                 },
               ].map((item, i) => (
                 <FadeIn key={item.step} isVisible={isVisible} delay={300 + i * 100}>
-                  <div className="flex gap-4 items-start">
-                    <div className="text-2xl tracking-widest font-display opacity-20 shrink-0">
+                  <div className="flex gap-5 items-start">
+                    <div className="text-[32px] tracking-widest font-display opacity-20 shrink-0">
                       {item.step}
                     </div>
-                    <div className="border-l border-border pl-4 space-y-1.5 pt-1">
-                      <h3 className="text-xs tracking-widest">{item.title}</h3>
-                      <p className="text-[10px] tracking-wide text-muted-foreground leading-relaxed">
+                    <div className="border-l border-border pl-5 space-y-2 pt-1">
+                      <h3 className="text-[16px] tracking-widest">{item.title}</h3>
+                      <p className="text-[14px] tracking-wide text-muted-foreground leading-relaxed">
                         {item.desc}
                       </p>
                     </div>
@@ -964,16 +964,16 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="stack" onInView={() => setActiveSlide(10)}>
         {(isVisible) => (
-          <div className="space-y-12">
-            <div className="text-center space-y-4">
+          <div className="space-y-14">
+            <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
-                <div className="text-[10px] tracking-[0.3em] text-muted-foreground">
+                <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
                   TECHNOLOGY
                 </div>
               </FadeIn>
 
               <FadeIn isVisible={isVisible} delay={150}>
-                <h2 className="text-2xl md:text-4xl tracking-widest font-display">
+                <h2 className="text-[36px] md:text-[56px] tracking-widest font-display">
                   TECH STACK
                 </h2>
               </FadeIn>
@@ -1033,15 +1033,15 @@ export default function PitchPage() {
                 ].map((row) => (
                   <div
                     key={row.layer}
-                    className="grid grid-cols-3 gap-4 p-4 items-center"
+                    className="grid grid-cols-3 gap-6 p-5 items-center"
                   >
-                    <div className="text-[10px] tracking-widest text-muted-foreground">
+                    <div className="text-[14px] tracking-widest text-muted-foreground">
                       {row.layer}
                     </div>
-                    <div className="text-xs tracking-widest font-mono">
+                    <div className="text-[15px] tracking-widest font-mono">
                       {row.tech}
                     </div>
-                    <div className="text-[10px] tracking-wide text-muted-foreground">
+                    <div className="text-[13px] tracking-wide text-muted-foreground">
                       {row.detail}
                     </div>
                   </div>
@@ -1057,25 +1057,25 @@ export default function PitchPage() {
       ════════════════════════════════════════════════════════════════════ */}
       <Slide id="closing" inverted onInView={() => setActiveSlide(11)}>
         {(isVisible) => (
-          <div className="text-center space-y-10">
+          <div className="text-center space-y-12">
             <FadeIn isVisible={isVisible} delay={0}>
-              <div className="text-[10px] tracking-[0.3em] opacity-50">
+              <div className="text-[15px] tracking-[0.3em] opacity-50">
                 ETHGLOBAL HACKMONEY 2026 · SOLO BUILD
               </div>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={200}>
-              <h2 className="text-5xl md:text-[80px] tracking-[0.2em] font-display leading-none">
+              <h2 className="text-[80px] md:text-[130px] tracking-[0.2em] font-display leading-none">
                 ZEBRA
               </h2>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={400}>
-              <div className="w-16 h-px bg-current mx-auto" />
+              <div className="w-20 h-px bg-current mx-auto" />
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={600}>
-              <p className="text-sm md:text-lg tracking-[0.15em]">
+              <p className="text-[22px] md:text-[28px] tracking-[0.15em]">
                 PRIVACY-FIRST TRADING
                 <br />
                 INFRASTRUCTURE FOR SUI
@@ -1083,7 +1083,7 @@ export default function PitchPage() {
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={800}>
-              <p className="text-[10px] tracking-wide opacity-50 max-w-md mx-auto leading-relaxed">
+              <p className="text-[15px] tracking-wide opacity-50 max-w-xl mx-auto leading-relaxed">
                 ON-CHAIN, AN OBSERVER SEES A COMMITMENT HASH GO IN AND FUNDS
                 ARRIVE AT UNRELATED ADDRESSES. THERE IS NO VISIBLE CONNECTION
                 BETWEEN THE TRADER, THE ORDER, AND THE SETTLEMENT.
@@ -1095,7 +1095,7 @@ export default function PitchPage() {
                 <Link href="/trade">
                   <Button
                     size="lg"
-                    className="bg-background text-foreground hover:bg-background/90"
+                    className="bg-transparent text-current border-current hover:opacity-70"
                   >
                     TRY ZEBRA
                   </Button>
@@ -1105,7 +1105,7 @@ export default function PitchPage() {
 
             <FadeIn isVisible={isVisible} delay={1200}>
               <div className="pt-8 space-y-2">
-                <div className="flex items-center justify-center gap-8 text-[10px] tracking-widest opacity-40">
+                <div className="flex items-center justify-center gap-8 text-[14px] tracking-widest opacity-40">
                   <span>SUI</span>
                   <span>·</span>
                   <span>DEEPBOOK</span>
