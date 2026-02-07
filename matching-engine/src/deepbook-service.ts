@@ -20,6 +20,17 @@ export class DeepBookService {
       } catch {}
     }
 
+    // Patch: DeepBook SDK's midPrice() creates transactions without a sender,
+    // but SuiJsonRpcClient.core.simulateTransaction() requires one.
+    // Inject the default sender before simulation to prevent "Missing transaction sender".
+    const originalSimulate = suiClient.core.simulateTransaction.bind(suiClient.core);
+    suiClient.core.simulateTransaction = async (options: any) => {
+      if (options.transaction && typeof options.transaction.setSenderIfNotSet === 'function') {
+        options.transaction.setSenderIfNotSet(address);
+      }
+      return originalSimulate(options);
+    };
+
     this.dbClient = new DeepBookClient({
       address,
       network: 'testnet',

@@ -84,10 +84,10 @@ export function OrderConfirmationModal({
     try {
       const result = await onConfirm(handleProgress);
       if (result) {
-        // Mark monitoring steps
+        // Mark monitoring steps as pending (no pulse) with MONITORING label
         setSteps(prev => prev.map(step => {
           if (step.id === "await-match" || step.id === "settlement") {
-            return { ...step, status: "active" as const, desc: "MONITORING" };
+            return { ...step, status: "pending" as const, desc: "MONITORING" };
           }
           return step;
         }));
