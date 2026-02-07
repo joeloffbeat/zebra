@@ -1,18 +1,32 @@
 'use client';
 
-import { useSignAndExecuteTransaction } from '@mysten/dapp-kit';
+import { useSignTransaction, useSuiClient } from '@mysten/dapp-kit';
 import { useCallback, useState } from 'react';
 import { useOrderStore } from '@/lib/stores/order-store';
 import { submitHiddenOrder, cancelOrder } from '@/lib/sui/dark-pool';
 import { SubmitOrderParams, HiddenOrder } from '@/lib/sui/types';
 
 export function useDarkPool() {
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction({
-    execute: { showEffects: true, showEvents: true },
-  });
+  const { mutateAsync: signTransaction } = useSignTransaction();
+  const suiClient = useSuiClient();
   const { addOrder, updateOrderStatus, orders } = useOrderStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Wrapper that signs and then executes via SuiClient
+  const signAndExecute = useCallback(async ({ transaction }: { transaction: unknown }) => {
+    // Sign the transaction
+    const { signature, bytes } = await signTransaction({ transaction });
+
+    // Execute via SuiClient
+    const result = await suiClient.executeTransactionBlock({
+      transactionBlock: bytes,
+      signature,
+      options: { showEffects: true, showEvents: true },
+    });
+
+    return { digest: result.digest, effects: result.effects, events: result.events };
+  }, [signTransaction, suiClient]);
 
   const submitOrder = useCallback(async (params: SubmitOrderParams): Promise<HiddenOrder | null> => {
     setIsSubmitting(true);
