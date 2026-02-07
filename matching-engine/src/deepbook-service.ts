@@ -51,8 +51,6 @@ export class DeepBookService {
   }
 
   async getMidPrice(poolKey: string = 'SUI_DBUSDC'): Promise<number | null> {
-    const FALLBACK_SUI_PRICE = 3.50;
-
     try {
       // Build the same transaction the DeepBook SDK would build,
       // but use devInspectTransactionBlock instead of simulateTransaction.
@@ -67,9 +65,9 @@ export class DeepBookService {
       });
 
       if (!result.results?.[0]?.returnValues?.[0]) {
-        console.log(`DeepBook mid-price returned no data, using fallback: ${FALLBACK_SUI_PRICE}`);
-        logService.addLog('warn', 'deepbook', `DeepBook mid-price returned no data, using fallback: ${FALLBACK_SUI_PRICE}`);
-        return FALLBACK_SUI_PRICE;
+        console.log(`DeepBook mid-price returned no data for ${poolKey} — pool has no liquidity`);
+        logService.addLog('warn', 'deepbook', `DeepBook mid-price returned no data for ${poolKey} — pool has no liquidity`);
+        return null;
       }
 
       const [bytes] = result.results[0].returnValues[0];
@@ -78,9 +76,9 @@ export class DeepBookService {
       const midPrice = Number(adjustedMidPrice.toFixed(9));
 
       if (midPrice === 0) {
-        console.log(`DeepBook mid-price is 0 (empty book), using fallback: ${FALLBACK_SUI_PRICE}`);
-        logService.addLog('warn', 'deepbook', `DeepBook mid-price is 0 (empty book), using fallback: ${FALLBACK_SUI_PRICE}`);
-        return FALLBACK_SUI_PRICE;
+        console.log(`DeepBook mid-price is 0 (empty book) for ${poolKey} — no liquidity`);
+        logService.addLog('warn', 'deepbook', `DeepBook mid-price is 0 (empty book) for ${poolKey} — no liquidity`);
+        return null;
       }
 
       console.log(`DeepBook mid-price for ${poolKey}: ${midPrice}`);
@@ -89,9 +87,7 @@ export class DeepBookService {
     } catch (error) {
       console.error(`Failed to get mid-price for ${poolKey}:`, error);
       logService.addLog('error', 'deepbook', `Failed to get mid-price for ${poolKey}: ${error}`);
-      console.log(`Using fallback price: ${FALLBACK_SUI_PRICE}`);
-      logService.addLog('warn', 'deepbook', `Using fallback price: ${FALLBACK_SUI_PRICE}`);
-      return FALLBACK_SUI_PRICE;
+      return null;
     }
   }
 

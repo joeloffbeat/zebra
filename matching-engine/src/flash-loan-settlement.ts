@@ -72,6 +72,24 @@ export class FlashLoanSettlementService {
       }));
     }
 
+    // Check actual bid-side liquidity before attempting swap
+    const orderBook = await this.deepBookService.getOrderBook('SUI_DBUSDC');
+    const hasBids = orderBook?.bids && orderBook.bids.prices.length > 0 &&
+      orderBook.bids.quantities.some(q => q > 0);
+
+    if (!hasBids) {
+      const totalSui = sells.reduce((sum, s) => sum + Number(s.decryptedLockedAmount) / 1e9, 0);
+      console.warn(`FlashLoanSettlement: No bid-side liquidity in DeepBook pool, skipping settlement of ${sells.length} sell(s) totaling ${totalSui.toFixed(4)} SUI`);
+      logService.addLog('warn', 'flash-loan', `FlashLoanSettlement: No bid-side liquidity, skipping ${sells.length} sell(s) totaling ${totalSui.toFixed(4)} SUI — orders will retry next batch`);
+      return sells.map(s => ({
+        success: false,
+        commitment: s.commitment,
+        sellerAddress: s.owner,
+        amountSui: s.decryptedLockedAmount,
+        error: 'No bid-side liquidity in DeepBook pool',
+      }));
+    }
+
     // Fetch mid-price for minOut calculation
     const midPrice = await this.deepBookService.getMidPrice('SUI_DBUSDC');
     if (!midPrice || midPrice <= 0) {
@@ -86,8 +104,23 @@ export class FlashLoanSettlementService {
       }));
     }
 
-    console.log(`FlashLoanSettlement: Using mid-price ${midPrice} with ${MAX_SLIPPAGE * 100}% max slippage`);
-    logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Using mid-price ${midPrice} with ${MAX_SLIPPAGE * 100}% max slippage`);
+    // Check if bid-side has enough depth for the total sell volume
+    const totalSuiToSwap = sells.reduce((sum, s) => sum + Number(s.decryptedLockedAmount) / 1e9, 0);
+    const totalBidDepth = orderBook!.bids.quantities.reduce((sum, q) => sum + q, 0);
+    if (totalBidDepth < totalSuiToSwap * 0.5) {
+      console.warn(`FlashLoanSettlement: Insufficient bid depth (${totalBidDepth.toFixed(4)} SUI) for ${totalSuiToSwap.toFixed(4)} SUI sell volume, skipping`);
+      logService.addLog('warn', 'flash-loan', `FlashLoanSettlement: Insufficient bid depth (${totalBidDepth.toFixed(4)}) for ${totalSuiToSwap.toFixed(4)} SUI — orders will retry next batch`);
+      return sells.map(s => ({
+        success: false,
+        commitment: s.commitment,
+        sellerAddress: s.owner,
+        amountSui: s.decryptedLockedAmount,
+        error: `Insufficient bid depth: ${totalBidDepth.toFixed(4)} available vs ${totalSuiToSwap.toFixed(4)} needed`,
+      }));
+    }
+
+    console.log(`FlashLoanSettlement: Using mid-price ${midPrice} with ${MAX_SLIPPAGE * 100}% max slippage, bid depth: ${totalBidDepth.toFixed(4)} SUI`);
+    logService.addLog('info', 'flash-loan', `FlashLoanSettlement: mid-price ${midPrice}, ${MAX_SLIPPAGE * 100}% max slippage, bid depth: ${totalBidDepth.toFixed(4)} SUI`);
 
     // Try batch PTB first (all sells in one transaction)
     try {
