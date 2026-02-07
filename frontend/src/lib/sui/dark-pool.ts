@@ -28,6 +28,7 @@ export async function submitHiddenOrder(
 
   onProgress?.("zk-proof", "active");
   console.log('[ZEBRA] Generating ZK proof...');
+  const proofStart = performance.now();
   const proofResult = await generateOrderProof({
     secret,
     side: params.side === 'buy' ? 1 : 0,
@@ -39,9 +40,11 @@ export async function submitHiddenOrder(
     currentTime,
     poolId,
   });
-  console.log('[ZEBRA] ZK proof generated:', proofResult.commitment.slice(0, 20) + '...');
+  const proofDurationMs = Math.round(performance.now() - proofStart);
+  console.log('[ZEBRA] ZK proof generated:', proofResult.commitment.slice(0, 20) + '...', `(${proofDurationMs}ms)`);
   onProgress?.("zk-proof", "complete", undefined, {
     proof: JSON.stringify(proofResult.proof),
+    durationMs: String(proofDurationMs),
     commitment: proofResult.commitment,
     nullifier: proofResult.nullifier,
   });

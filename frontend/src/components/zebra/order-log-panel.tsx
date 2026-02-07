@@ -59,7 +59,7 @@ export function OrderLogPanel({ stepData, settlementDigest }: OrderLogPanelProps
         </p>
       )}
 
-      <LogSection title="ZK PROOF (GROTH16)" visible={!!zkData}>
+      <LogSection title={`ZK PROOF (GROTH16)${zkData?.durationMs ? ` \u2014 ${zkData.durationMs}ms` : ""}`} visible={!!zkData}>
         {zkData?.proof && (
           <pre className={cn(
             "text-[9px] font-mono text-foreground/80",
