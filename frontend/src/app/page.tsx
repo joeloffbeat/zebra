@@ -97,15 +97,15 @@ export default function LandingPage() {
           <header className="border-b border-border bg-background">
             <div className="container mx-auto px-6 h-16 flex items-center justify-between">
               <span className="text-sm tracking-widest">ZEBRA</span>
-              <div className="flex items-center gap-6">
-                <Link
-                  href="/tee"
-                  className="text-xs tracking-widest opacity-40 hover:opacity-60 transition-opacity"
-                >
-                  TEE
+              <div className="flex items-center gap-4">
+                <Link href="/tee">
+                  <Button variant="outline">TEE</Button>
                 </Link>
                 <Link href="/trade">
                   <Button>TRADE</Button>
+                </Link>
+                <Link href="/pitch">
+                  <Button variant="outline">PITCH</Button>
                 </Link>
               </div>
             </div>
@@ -167,8 +167,8 @@ export default function LandingPage() {
       </div>
 
       {/* CONTENT AFTER VIDEO */}
-      <section className="min-h-screen border-t border-border">
-        <div className="container mx-auto px-6 py-24">
+      <section className="border-t border-border">
+        <div className="container mx-auto px-6 pt-24 pb-8">
           <div className="max-w-3xl mx-auto space-y-16">
             {/* INTRO */}
             <div className="text-center space-y-4">

@@ -39,25 +39,24 @@ export function Navbar() {
   return (
     <>
       <header className="border-b border-border bg-background">
-        <div className="container mx-auto px-6 h-16 flex items-center justify-between">
-          <div className="flex items-center gap-8">
-            <Link href="/" className="text-sm tracking-widest">
-              ZEBRA
-            </Link>
-            <nav className="flex items-center gap-6">
-              {NAV_LINKS.map((link) => (
-                <Link
-                  key={link.href}
-                  href={link.href}
-                  className={`text-xs tracking-widest transition-opacity hover:opacity-60 ${
-                    pathname === link.href ? "opacity-100" : "opacity-40"
-                  }`}
-                >
-                  {link.label}
-                </Link>
-              ))}
-            </nav>
-          </div>
+        <div className="container mx-auto px-6 h-16 flex items-center">
+          <Link href="/" className="text-sm tracking-widest">
+            ZEBRA
+          </Link>
+
+          <nav className="flex-1 flex items-center justify-center gap-6">
+            {NAV_LINKS.map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                className={`text-xs tracking-widest transition-opacity hover:opacity-60 ${
+                  pathname === link.href ? "opacity-100" : "opacity-40"
+                }`}
+              >
+                {link.label}
+              </Link>
+            ))}
+          </nav>
 
           <div className="flex items-center gap-4">
             {isConnected && address && (
