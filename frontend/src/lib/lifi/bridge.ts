@@ -1,6 +1,6 @@
 import { getQuote, executeRoute, getStatus, convertQuoteToRoute } from '@lifi/sdk';
 import type { Route, StatusResponse } from '@lifi/sdk';
-import { LIFI_CHAIN_IDS, ARB_USDC_ADDRESS, SUI_USDC_ADDRESS } from '../constants';
+import { LIFI_CHAIN_IDS, SUI_USDC_ADDRESS, USDC_BY_CHAIN } from '../constants';
 
 export interface BridgeQuote {
   route: Route;
@@ -10,15 +10,19 @@ export interface BridgeQuote {
   steps: { tool: string; type: string }[];
 }
 
-export async function getQuoteArbToSui(
+export async function getQuoteToSui(
+  fromChainId: number,
   fromAmount: string,
   fromAddress: string,
   toAddress: string,
 ): Promise<BridgeQuote> {
+  const fromToken = USDC_BY_CHAIN[fromChainId];
+  if (!fromToken) throw new Error(`Unsupported source chain: ${fromChainId}`);
+
   const quote = await getQuote({
-    fromChain: LIFI_CHAIN_IDS.ARBITRUM,
+    fromChain: fromChainId,
     toChain: LIFI_CHAIN_IDS.SUI,
-    fromToken: ARB_USDC_ADDRESS,
+    fromToken,
     toToken: SUI_USDC_ADDRESS,
     fromAmount,
     fromAddress,

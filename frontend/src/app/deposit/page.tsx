@@ -13,24 +13,15 @@ import {
 } from "@/components/ui";
 import { Navbar } from "@/components/zebra";
 import { useWallet } from "@/hooks/use-wallet";
-import { useEvmWallet } from "@/hooks/use-evm-wallet";
+import { usePrivyWallets } from "@/hooks/use-privy-wallets";
 import { useWalletStore } from "@/lib/stores/wallet-store";
-import { getQuoteArbToSui, executeBridge } from "@/lib/lifi/bridge";
+import { getQuoteToSui, executeBridge } from "@/lib/lifi/bridge";
 import type { BridgeQuote } from "@/lib/lifi/bridge";
 import { LIFI_CHAIN_IDS } from "@/lib/constants";
 
 const CHAINS = [
   { id: "arbitrum", name: "ARBITRUM", chainId: LIFI_CHAIN_IDS.ARBITRUM },
-  { id: "ethereum", name: "ETHEREUM", chainId: LIFI_CHAIN_IDS.ETHEREUM },
   { id: "base", name: "BASE", chainId: LIFI_CHAIN_IDS.BASE },
-  { id: "optimism", name: "OPTIMISM", chainId: LIFI_CHAIN_IDS.OPTIMISM },
-  { id: "polygon", name: "POLYGON", chainId: LIFI_CHAIN_IDS.POLYGON },
-];
-
-const TOKENS = [
-  { symbol: "USDC", name: "USD COIN", decimals: 6 },
-  { symbol: "ETH", name: "ETHEREUM", decimals: 18 },
-  { symbol: "USDT", name: "TETHER", decimals: 6 },
 ];
 
 type BridgeStatus = "idle" | "quoting" | "quoted" | "executing" | "success" | "error";
@@ -41,7 +32,6 @@ function truncateAddress(address: string): string {
 
 export default function DepositPage() {
   const [fromChain, setFromChain] = useState("arbitrum");
-  const [fromToken, setFromToken] = useState("USDC");
   const [amount, setAmount] = useState("");
   const [quote, setQuote] = useState<BridgeQuote | null>(null);
   const [status, setStatus] = useState<BridgeStatus>("idle");
@@ -49,10 +39,11 @@ export default function DepositPage() {
   const [txHash, setTxHash] = useState<string | null>(null);
 
   const { address: suiAddress, isConnected: isSuiConnected } = useWallet();
-  const { evmAddress, isEvmConnected, loginWithPrivy } = useEvmWallet();
+  const { evmAddress, isPrivyAuthenticated, loginWithPrivy } = usePrivyWallets();
   const { balance } = useWalletStore();
 
-  const bothConnected = isEvmConnected && isSuiConnected;
+  const bothConnected = isPrivyAuthenticated && isSuiConnected;
+  const selectedChain = CHAINS.find((c) => c.id === fromChain) || CHAINS[0];
 
   const handleNumericInput = (value: string) => {
     if (value === "" || /^\d*\.?\d*$/.test(value)) {
@@ -70,11 +61,8 @@ export default function DepositPage() {
     setError(null);
 
     try {
-      const token = TOKENS.find(t => t.symbol === fromToken);
-      const decimals = token?.decimals || 6;
-      const amountRaw = (parseFloat(amount) * Math.pow(10, decimals)).toString();
-
-      const result = await getQuoteArbToSui(amountRaw, evmAddress, suiAddress);
+      const amountRaw = (parseFloat(amount) * 1e6).toString();
+      const result = await getQuoteToSui(selectedChain.chainId, amountRaw, evmAddress, suiAddress);
       setQuote(result);
       setStatus("quoted");
     } catch (err) {
@@ -82,7 +70,7 @@ export default function DepositPage() {
       setError(err instanceof Error ? err.message : 'Failed to get quote');
       setStatus("error");
     }
-  }, [amount, evmAddress, suiAddress, fromToken]);
+  }, [amount, evmAddress, suiAddress, selectedChain.chainId]);
 
   const handleExecuteBridge = useCallback(async () => {
     if (!quote) return;
@@ -117,7 +105,7 @@ export default function DepositPage() {
         <div className="text-center mb-12">
           <h1 className="text-lg tracking-widest mb-2">DEPOSIT</h1>
           <p className="text-xs tracking-wide text-muted-foreground">
-            BRIDGE FROM ANY CHAIN, TRADE ON SUI
+            BRIDGE USDC FROM ARBITRUM OR BASE TO SUI
           </p>
         </div>
 
@@ -128,7 +116,7 @@ export default function DepositPage() {
               FROM
             </div>
 
-            {isEvmConnected && evmAddress && (
+            {isPrivyAuthenticated && evmAddress && (
               <div className="text-[10px] tracking-wide text-muted-foreground mb-3 font-mono">
                 EVM: {truncateAddress(evmAddress)}
               </div>
@@ -152,21 +140,12 @@ export default function DepositPage() {
                 </Select>
               </div>
 
-              {/* TOKEN */}
+              {/* TOKEN (USDC only) */}
               <div className="space-y-2">
                 <Label>TOKEN</Label>
-                <Select value={fromToken} onValueChange={(v) => { setFromToken(v); setQuote(null); setStatus("idle"); }}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {TOKENS.map((token) => (
-                      <SelectItem key={token.symbol} value={token.symbol}>
-                        {token.symbol}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <div className="flex items-center h-10 px-3 border border-border text-xs tracking-widest">
+                  USDC
+                </div>
               </div>
 
               {/* AMOUNT */}
@@ -182,7 +161,7 @@ export default function DepositPage() {
                     className="flex-1"
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
-                    {fromToken}
+                    USDC
                   </span>
                 </div>
               </div>
@@ -299,7 +278,7 @@ export default function DepositPage() {
 
           {/* SUBMIT */}
           <div className="p-6">
-            {!isEvmConnected ? (
+            {!isPrivyAuthenticated ? (
               <Button className="w-full" size="lg" onClick={() => loginWithPrivy()}>
                 LOGIN WITH PRIVY
               </Button>
@@ -326,7 +305,7 @@ export default function DepositPage() {
                 size="lg"
                 onClick={handleExecuteBridge}
               >
-                BRIDGE {amount} {fromToken} TO SUI
+                BRIDGE {amount} USDC TO SUI
               </Button>
             ) : status === "executing" ? (
               <Button className="w-full" size="lg" disabled>

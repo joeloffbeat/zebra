@@ -3,12 +3,14 @@
 import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
+import type { PrivyWalletEntry } from "@/hooks/use-privy-wallets";
 
 interface WalletDropdownProps {
-  suiAddress: string | null;
-  evmAddress?: string | null;
+  browserSuiAddress: string | null;
+  privyWallets: PrivyWalletEntry[];
   balance: { sui: string; usdc: string };
-  onDisconnect: () => void;
+  onDisconnectSui: () => void;
+  onLogoutPrivy: () => void;
 }
 
 function truncateAddress(address: string): string {
@@ -20,10 +22,11 @@ function copyToClipboard(text: string) {
 }
 
 export function WalletDropdown({
-  suiAddress,
-  evmAddress,
+  browserSuiAddress,
+  privyWallets,
   balance,
-  onDisconnect,
+  onDisconnectSui,
+  onLogoutPrivy,
 }: WalletDropdownProps) {
   const [open, setOpen] = useState(false);
   const [copiedAddr, setCopiedAddr] = useState<string | null>(null);
@@ -34,10 +37,12 @@ export function WalletDropdown({
     setTimeout(() => setCopiedAddr(null), 1500);
   }, []);
 
+  const displayAddress = browserSuiAddress || privyWallets[0]?.address;
+
   return (
     <div className="relative">
       <Button onClick={() => setOpen(!open)}>
-        {suiAddress ? truncateAddress(suiAddress) : "CONNECT"}
+        {displayAddress ? truncateAddress(displayAddress) : "CONNECT"}
       </Button>
 
       {open && (
@@ -61,46 +66,62 @@ export function WalletDropdown({
               </div>
             </div>
 
-            {/* Sui Wallet */}
-            {suiAddress && (
-              <div className="p-3 border-b border-border">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-[9px] tracking-widest text-muted-foreground">
-                      SUI
-                    </div>
-                    <div className="text-xs font-mono">
-                      {truncateAddress(suiAddress)}
+            {/* Embedded Wallets */}
+            {privyWallets.length > 0 && (
+              <div className="border-b border-border">
+                <div className="px-3 pt-3 pb-1">
+                  <div className="text-[9px] tracking-widest text-muted-foreground">
+                    EMBEDDED WALLETS
+                  </div>
+                </div>
+                {privyWallets.map((wallet) => (
+                  <div key={`${wallet.chain}-${wallet.address}`} className="px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[9px] tracking-widest text-muted-foreground">
+                          {wallet.chain}
+                        </div>
+                        <div className="text-xs font-mono">
+                          {truncateAddress(wallet.address)}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleCopy(wallet.address)}
+                        className="text-[9px] tracking-widest text-muted-foreground hover:text-foreground"
+                      >
+                        {copiedAddr === wallet.address ? "COPIED" : "COPY"}
+                      </button>
                     </div>
                   </div>
-                  <button
-                    onClick={() => handleCopy(suiAddress)}
-                    className="text-[9px] tracking-widest text-muted-foreground hover:text-foreground"
-                  >
-                    {copiedAddr === suiAddress ? "COPIED" : "COPY"}
-                  </button>
-                </div>
+                ))}
               </div>
             )}
 
-            {/* EVM Wallet */}
-            {evmAddress && (
-              <div className="p-3 border-b border-border">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="text-[9px] tracking-widest text-muted-foreground">
-                      EVM
-                    </div>
-                    <div className="text-xs font-mono">
-                      {truncateAddress(evmAddress)}
-                    </div>
+            {/* Browser Wallet */}
+            {browserSuiAddress && (
+              <div className="border-b border-border">
+                <div className="px-3 pt-3 pb-1">
+                  <div className="text-[9px] tracking-widest text-muted-foreground">
+                    BROWSER WALLET
                   </div>
-                  <button
-                    onClick={() => handleCopy(evmAddress)}
-                    className="text-[9px] tracking-widest text-muted-foreground hover:text-foreground"
-                  >
-                    {copiedAddr === evmAddress ? "COPIED" : "COPY"}
-                  </button>
+                </div>
+                <div className="px-3 py-2">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <div className="text-[9px] tracking-widest text-muted-foreground">
+                        SUI
+                      </div>
+                      <div className="text-xs font-mono">
+                        {truncateAddress(browserSuiAddress)}
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => handleCopy(browserSuiAddress)}
+                      className="text-[9px] tracking-widest text-muted-foreground hover:text-foreground"
+                    >
+                      {copiedAddr === browserSuiAddress ? "COPIED" : "COPY"}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -115,7 +136,8 @@ export function WalletDropdown({
               <button
                 onClick={() => {
                   setOpen(false);
-                  onDisconnect();
+                  onDisconnectSui();
+                  onLogoutPrivy();
                 }}
                 className="text-[10px] tracking-widest text-muted-foreground hover:text-foreground"
               >

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui";
 import { WalletModal } from "@/components/modals";
 import { WalletDropdown } from "@/components/zebra/wallet-dropdown";
 import { useWallet } from "@/hooks/use-wallet";
-import { useEvmWallet } from "@/hooks/use-evm-wallet";
+import { usePrivyWallets } from "@/hooks/use-privy-wallets";
 import { useWalletStore } from "@/lib/stores/wallet-store";
 
 const NAV_LINKS = [
@@ -20,9 +20,11 @@ const NAV_LINKS = [
 export function Navbar() {
   const pathname = usePathname();
   const { address, isConnected, connect, disconnect } = useWallet();
-  const { evmAddress } = useEvmWallet();
+  const { embeddedWallets, isPrivyAuthenticated, logoutPrivy } = usePrivyWallets();
   const { balance } = useWalletStore();
   const [walletModalOpen, setWalletModalOpen] = useState(false);
+
+  const showDropdown = isConnected || isPrivyAuthenticated;
 
   const handleWalletClick = () => {
     if (!isConnected) {
@@ -55,12 +57,13 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-4">
-            {isConnected && address ? (
+            {showDropdown ? (
               <WalletDropdown
-                suiAddress={address}
-                evmAddress={evmAddress}
+                browserSuiAddress={address ?? null}
+                privyWallets={embeddedWallets}
                 balance={balance}
-                onDisconnect={disconnect}
+                onDisconnectSui={disconnect}
+                onLogoutPrivy={logoutPrivy}
               />
             ) : (
               <Button onClick={handleWalletClick}>
