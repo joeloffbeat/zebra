@@ -3,6 +3,7 @@ import { OrderMatcher, Match } from './matcher.js';
 import { SettlementService } from './settlement.js';
 import { FlashLoanSettlementService, FlashLoanSettlementResult } from './flash-loan-settlement.js';
 import { TeeAttestationService } from './tee-attestation.js';
+import { logService } from './log-service.js';
 
 export interface BatchResolution {
   batchId: number;
@@ -53,6 +54,7 @@ export class BatchEngine {
     this.teeService = teeService;
 
     console.log(`BatchEngine initialized (window=${BATCH_WINDOW_MS / 1000}s, threshold=${BATCH_THRESHOLD})`);
+    logService.addLog('info', 'batch-engine', `BatchEngine initialized (window=${BATCH_WINDOW_MS / 1000}s, threshold=${BATCH_THRESHOLD})`);
   }
 
   /**
@@ -66,10 +68,12 @@ export class BatchEngine {
     const totalOrders = counts.bids + counts.asks;
 
     console.log(`BatchEngine: Order added (total=${totalOrders}, batchId=${this.batchId})`);
+    logService.addLog('info', 'batch-engine', `BatchEngine: Order added (total=${totalOrders}, batchId=${this.batchId})`);
 
     // Trigger early resolution if threshold reached
     if (totalOrders >= BATCH_THRESHOLD) {
       console.log(`BatchEngine: Threshold reached (${totalOrders} >= ${BATCH_THRESHOLD}), resolving early`);
+      logService.addLog('info', 'batch-engine', `BatchEngine: Threshold reached (${totalOrders} >= ${BATCH_THRESHOLD}), resolving early`);
       this.triggerResolution();
     }
   }
@@ -109,6 +113,7 @@ export class BatchEngine {
       }, BATCH_WINDOW_MS);
 
       console.log(`BatchEngine: Batch #${this.batchId} started (${BATCH_WINDOW_MS / 1000}s window)`);
+      logService.addLog('info', 'batch-engine', `BatchEngine: Batch #${this.batchId} started (${BATCH_WINDOW_MS / 1000}s window)`);
     }
     // If timer already running, no action needed — window stays the same
   }
@@ -123,6 +128,7 @@ export class BatchEngine {
 
     this.resolveBatch().catch(err => {
       console.error('BatchEngine: Resolution failed:', err);
+      logService.addLog('error', 'batch-engine', `Resolution failed: ${err}`);
       this.status = 'idle';
       this.resolving = false;
     });
@@ -144,6 +150,7 @@ export class BatchEngine {
 
     if (totalOrders === 0) {
       console.log(`BatchEngine: Batch #${currentBatchId} — no orders to resolve`);
+      logService.addLog('info', 'batch-engine', `BatchEngine: Batch #${currentBatchId} — no orders to resolve`);
       this.status = 'idle';
       this.resolving = false;
       this.batchStartTime = null;
@@ -151,6 +158,7 @@ export class BatchEngine {
     }
 
     console.log(`BatchEngine: Resolving batch #${currentBatchId} (${counts.bids} bids, ${counts.asks} asks)`);
+    logService.addLog('info', 'batch-engine', `BatchEngine: Resolving batch #${currentBatchId} (${counts.bids} bids, ${counts.asks} asks)`);
 
     // ── Phase A: Internal matching ─────────────────────────────────
     let internalMatches = 0;
@@ -175,8 +183,10 @@ export class BatchEngine {
       }
 
       console.log(`BatchEngine: Phase A complete — ${internalMatches} internal matches`);
+      logService.addLog('info', 'batch-engine', `BatchEngine: Phase A complete — ${internalMatches} internal matches`);
     } catch (err) {
       console.error('BatchEngine: Phase A (internal matching) error:', err);
+      logService.addLog('error', 'batch-engine', `BatchEngine: Phase A (internal matching) error: ${err}`);
     }
 
     // ── Phase B: Flash loan settlement for residual SELLs ──────────
@@ -186,6 +196,7 @@ export class BatchEngine {
     const residualSells = this.orderBook.getAsks();
     if (residualSells.length > 0) {
       console.log(`BatchEngine: Phase B — ${residualSells.length} residual SELLs to settle via DeepBook`);
+      logService.addLog('info', 'batch-engine', `BatchEngine: Phase B — ${residualSells.length} residual SELLs to settle via DeepBook`);
 
       try {
         const results = await this.flashLoanSettlement.settleResidualSells(residualSells);
@@ -207,21 +218,25 @@ export class BatchEngine {
           } else {
             deepBookFailures++;
             console.warn(`BatchEngine: Flash loan failed for ${result.commitment.slice(0, 16)}...: ${result.error}`);
+            logService.addLog('warn', 'batch-engine', `BatchEngine: Flash loan failed for ${result.commitment.slice(0, 16)}...: ${result.error}`);
             // Leave in order book — will carry to next batch
           }
         }
       } catch (err) {
         console.error('BatchEngine: Phase B (flash loan settlement) error:', err);
+        logService.addLog('error', 'batch-engine', `BatchEngine: Phase B (flash loan settlement) error: ${err}`);
         deepBookFailures = residualSells.length;
       }
 
       console.log(`BatchEngine: Phase B complete — ${deepBookSettlements} settled, ${deepBookFailures} failed`);
+      logService.addLog('info', 'batch-engine', `BatchEngine: Phase B complete — ${deepBookSettlements} settled, ${deepBookFailures} failed`);
     }
 
     // ── Phase C: Residual BUYs carry over ──────────────────────────
     const carryOverBuys = this.orderBook.getOrderCount().bids;
     if (carryOverBuys > 0) {
       console.log(`BatchEngine: Phase C — ${carryOverBuys} residual BUYs carry to next batch`);
+      logService.addLog('info', 'batch-engine', `BatchEngine: Phase C — ${carryOverBuys} residual BUYs carry to next batch`);
     }
 
     // Record resolution
@@ -236,6 +251,7 @@ export class BatchEngine {
     };
 
     console.log(`BatchEngine: Batch #${currentBatchId} resolved`, this.lastResolution);
+    logService.addLog('info', 'batch-engine', `BatchEngine: Batch #${currentBatchId} resolved`);
 
     this.status = 'idle';
     this.resolving = false;
