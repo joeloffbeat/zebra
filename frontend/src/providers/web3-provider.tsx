@@ -60,7 +60,8 @@ export function Web3Provider({ children }: Web3ProviderProps) {
         },
         loginMethods: ['email', 'wallet'],
         embeddedWallets: {
-          createOnLogin: 'all-users',
+          ethereum: { createOnLogin: 'all-users' },
+          solana: { createOnLogin: 'all-users' },
         },
       }}
     >

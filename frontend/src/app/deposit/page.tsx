@@ -84,8 +84,7 @@ export default function DepositPage() {
 
     try {
       const result = await executeBridge(quote.route);
-      const hash = result.steps?.[0]?.execution?.process?.[0]?.txHash;
-      if (hash) setTxHash(hash);
+      if (result.txHash) setTxHash(result.txHash);
       setStatus("success");
     } catch (err) {
       console.error('[LiFi] Bridge failed:', err);
