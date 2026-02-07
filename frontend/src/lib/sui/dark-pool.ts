@@ -5,10 +5,12 @@ import { SubmitOrderParams, HiddenOrder } from './types';
 import { generateOrderProof, proofToSuiFormat, publicSignalsToSuiFormat, hexToBytes } from '../zk/prover';
 import { encryptOrderData } from '../seal/client';
 import { SEAL_ALLOWLIST_ID } from '../constants';
+import type { ProgressCallback } from './progress-types';
 
 export async function submitHiddenOrder(
   params: SubmitOrderParams,
-  signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> }
+  signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> },
+  onProgress?: ProgressCallback
 ): Promise<HiddenOrder> {
   console.log('[ZEBRA] Starting order submission...', params);
 
@@ -26,6 +28,7 @@ export async function submitHiddenOrder(
   const currentTime = BigInt(Math.floor(Date.now() / 1000));
   const poolId = 1n;
 
+  onProgress?.("zk-proof", "active");
   console.log('[ZEBRA] Generating ZK proof...');
   // Generate ZK proof
   const proofResult = await generateOrderProof({
@@ -40,6 +43,7 @@ export async function submitHiddenOrder(
     poolId,
   });
   console.log('[ZEBRA] ZK proof generated:', proofResult.commitment.slice(0, 20) + '...');
+  onProgress?.("zk-proof", "complete");
 
   // Convert to Sui format (little-endian)
   const proofBytes = proofToSuiFormat(proofResult.proof);
@@ -47,6 +51,7 @@ export async function submitHiddenOrder(
   const commitmentBytes = hexToBytes(proofResult.commitment);
   const nullifierBytes = hexToBytes(proofResult.nullifier);
 
+  onProgress?.("seal-encrypt", "active");
   console.log('[ZEBRA] Encrypting order with Seal...');
   // Encrypt order details with Seal (mandatory)
   const { encryptedBytes } = await encryptOrderData(
@@ -59,6 +64,7 @@ export async function submitHiddenOrder(
   );
   const encryptedData = new Uint8Array(encryptedBytes);
   console.log('[ZEBRA] Order encrypted, building transaction...');
+  onProgress?.("seal-encrypt", "complete");
 
   // Build transaction — unified submit_order, single type arg, splitCoins for locking
   const tx = new Transaction();
@@ -87,16 +93,22 @@ export async function submitHiddenOrder(
   console.log('[ZEBRA] Transaction target:', `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_order`);
   console.log('[ZEBRA] Pool object:', CONTRACTS.DARK_POOL_OBJECT);
 
+  onProgress?.("submit-tx", "active");
   let result;
   try {
     result = await signer.signAndExecuteTransaction({
       transaction: tx,
     });
     console.log('[ZEBRA] Transaction submitted:', result.digest);
+    onProgress?.("submit-tx", "complete");
   } catch (signError) {
     console.error('[ZEBRA] Sign/execute failed:', signError);
+    const message = signError instanceof Error ? signError.message : 'Transaction failed';
+    onProgress?.("submit-tx", "error", message);
     throw signError;
   }
+
+  onProgress?.("await-match", "active");
 
   return {
     id: crypto.randomUUID(),
@@ -116,8 +128,11 @@ export async function submitHiddenOrder(
 
 export async function cancelOrder(
   commitment: string,
-  signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> }
+  signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> },
+  onProgress?: ProgressCallback
 ): Promise<string> {
+  onProgress?.("build-tx", "active");
+
   const tx = new Transaction();
   tx.setGasBudget(10_000_000);
 
@@ -132,9 +147,20 @@ export async function cancelOrder(
     typeArguments: ['0x2::sui::SUI'],
   });
 
-  const result = await signer.signAndExecuteTransaction({
-    transaction: tx,
-  });
+  onProgress?.("build-tx", "complete");
+  onProgress?.("sign-execute", "active");
+
+  let result;
+  try {
+    result = await signer.signAndExecuteTransaction({
+      transaction: tx,
+    });
+    onProgress?.("sign-execute", "complete");
+  } catch (signError) {
+    const message = signError instanceof Error ? signError.message : 'Transaction failed';
+    onProgress?.("sign-execute", "error", message);
+    throw signError;
+  }
 
   return result.digest;
 }

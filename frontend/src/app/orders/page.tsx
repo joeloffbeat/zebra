@@ -20,7 +20,8 @@ import { useDarkPool } from "@/hooks/use-dark-pool";
 import { useBackend } from "@/hooks/use-backend";
 import { useOrderStatus } from "@/hooks/use-order-status";
 import { useWallet } from "@/hooks/use-wallet";
-import { MatchNotificationModal } from "@/components/modals";
+import type { ProgressCallback } from "@/lib/sui/progress-types";
+import { MatchNotificationModal, CancelOrderModal } from "@/components/modals";
 
 type OrderFilter = "ALL" | "PENDING" | "MATCHED" | "SETTLED" | "CANCELLED";
 
@@ -36,6 +37,8 @@ function timeAgo(ts: number): string {
 
 export default function OrdersPage() {
   const [filter, setFilter] = useState<OrderFilter>("ALL");
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelCommitment, setCancelCommitment] = useState("");
   const { isConnected } = useWallet();
   const { orders, cancelOrder, isSubmitting } = useDarkPool();
   const { matches } = useBackend();
@@ -76,8 +79,13 @@ export default function OrdersPage() {
     }
   };
 
-  const handleCancel = async (commitment: string) => {
-    await cancelOrder(commitment);
+  const handleCancel = (commitment: string) => {
+    setCancelCommitment(commitment);
+    setShowCancelModal(true);
+  };
+
+  const handleConfirmCancel = async (onProgress: ProgressCallback) => {
+    return await cancelOrder(cancelCommitment, onProgress);
   };
 
   return (
@@ -273,6 +281,14 @@ export default function OrdersPage() {
           </div>
         </div>
       </main>
+
+      {/* CANCEL ORDER MODAL */}
+      <CancelOrderModal
+        open={showCancelModal}
+        onOpenChange={setShowCancelModal}
+        commitment={cancelCommitment}
+        onConfirmCancel={handleConfirmCancel}
+      />
 
       {/* MATCH NOTIFICATION MODAL */}
       {latestMatch && (

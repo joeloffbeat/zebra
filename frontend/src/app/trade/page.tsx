@@ -24,13 +24,14 @@ import {
 } from "@/components/ui";
 import { Navbar } from "@/components/zebra";
 import { HerdStats, PrivacyBadge } from "@/components/zebra";
-import { OrderConfirmationModal, MatchNotificationModal } from "@/components/modals";
+import { OrderConfirmationModal, CancelOrderModal, MatchNotificationModal } from "@/components/modals";
 import { ZebraLoaderDots } from "@/components/zebra";
 import { useWallet } from "@/hooks/use-wallet";
 import { useDarkPool } from "@/hooks/use-dark-pool";
 import { useBackend } from "@/hooks/use-backend";
 import { useOrderStatus } from "@/hooks/use-order-status";
 import { useWalletStore } from "@/lib/stores/wallet-store";
+import type { ProgressCallback } from "@/lib/sui/progress-types";
 
 const EXPIRY_TO_SECONDS: Record<string, number> = {
   "1h": 3600,
@@ -63,9 +64,10 @@ export default function TradePage() {
   const [orderType, setOrderType] = useState<"LIMIT" | "MARKET">("LIMIT");
   const [expiry, setExpiry] = useState("24h");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [isProving, setIsProving] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [showCancelModal, setShowCancelModal] = useState(false);
+  const [cancelCommitment, setCancelCommitment] = useState("");
 
   const { isConnected } = useWallet();
   const { balance } = useWalletStore();
@@ -133,45 +135,46 @@ export default function TradePage() {
     setShowConfirmModal(true);
   }, [isConnected, amount, price]);
 
-  const handleConfirmOrder = useCallback(async () => {
-    setShowConfirmModal(false);
+  const handleConfirmOrder = useCallback(async (onProgress: ProgressCallback) => {
     setSubmitError(null);
-    setIsProving(true);
 
-    try {
-      // Convert to MIST (1 SUI = 1e9 MIST)
-      const amountMist = BigInt(Math.floor(parseFloat(amount) * 1e9));
-      const priceMist = BigInt(Math.floor(parseFloat(price) * 1e9));
-      const expiryTime = BigInt(
-        Math.floor(Date.now() / 1000) + EXPIRY_TO_SECONDS[expiry]
-      );
+    // Convert to MIST (1 SUI = 1e9 MIST)
+    const amountMist = BigInt(Math.floor(parseFloat(amount) * 1e9));
+    const priceMist = BigInt(Math.floor(parseFloat(price) * 1e9));
+    const expiryTime = BigInt(
+      Math.floor(Date.now() / 1000) + EXPIRY_TO_SECONDS[expiry]
+    );
 
-      const order = await submitOrder({
-        side: side.toLowerCase() as "buy" | "sell",
-        amount: amountMist,
-        price: priceMist,
-        expiry: expiryTime,
-      });
+    const order = await submitOrder({
+      side: side.toLowerCase() as "buy" | "sell",
+      amount: amountMist,
+      price: priceMist,
+      expiry: expiryTime,
+    }, onProgress);
 
-      if (order) {
-        setSubmitSuccess(true);
-        setAmount("");
-        setPrice("");
-        setTimeout(() => setSubmitSuccess(false), 3000);
-      }
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "ORDER SUBMISSION FAILED";
-      setSubmitError(message);
-    } finally {
-      setIsProving(false);
+    if (order) {
+      setSubmitSuccess(true);
+      setAmount("");
+      setPrice("");
+      setTimeout(() => setSubmitSuccess(false), 3000);
     }
+
+    return order;
   }, [amount, price, side, expiry, submitOrder]);
 
   const handleCancel = useCallback(
-    async (commitment: string) => {
-      await cancelOrder(commitment);
+    (commitment: string) => {
+      setCancelCommitment(commitment);
+      setShowCancelModal(true);
     },
-    [cancelOrder]
+    []
+  );
+
+  const handleConfirmCancel = useCallback(
+    async (onProgress: ProgressCallback) => {
+      return await cancelOrder(cancelCommitment, onProgress);
+    },
+    [cancelOrder, cancelCommitment]
   );
 
   const orderValue = (
@@ -405,13 +408,9 @@ export default function TradePage() {
                 className="w-full"
                 size="lg"
                 onClick={handleSubmit}
-                disabled={isSubmitting || isProving}
+                disabled={isSubmitting}
               >
-                {isProving ? (
-                  <span className="flex items-center gap-2">
-                    GENERATING ZK PROOF <ZebraLoaderDots />
-                  </span>
-                ) : isSubmitting ? (
+                {isSubmitting ? (
                   <span className="flex items-center gap-2">
                     SUBMITTING <ZebraLoaderDots />
                   </span>
@@ -654,6 +653,14 @@ export default function TradePage() {
           expiry: EXPIRY_LABELS[expiry],
         }}
         onConfirm={handleConfirmOrder}
+      />
+
+      {/* CANCEL ORDER MODAL */}
+      <CancelOrderModal
+        open={showCancelModal}
+        onOpenChange={setShowCancelModal}
+        commitment={cancelCommitment}
+        onConfirmCancel={handleConfirmCancel}
       />
 
       {/* MATCH NOTIFICATION MODAL */}

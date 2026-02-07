@@ -6,6 +6,7 @@ import { useCallback, useState } from 'react';
 import { useOrderStore } from '@/lib/stores/order-store';
 import { submitHiddenOrder, cancelOrder } from '@/lib/sui/dark-pool';
 import { SubmitOrderParams, HiddenOrder } from '@/lib/sui/types';
+import type { ProgressCallback } from '@/lib/sui/progress-types';
 
 export function useDarkPool() {
   const { mutateAsync: signTransaction } = useSignTransaction();
@@ -29,21 +30,24 @@ export function useDarkPool() {
     return { digest: result.digest, effects: result.effects, events: result.events };
   }, [signTransaction, suiClient]);
 
-  const submitOrder = useCallback(async (params: SubmitOrderParams): Promise<HiddenOrder | null> => {
+  const submitOrder = useCallback(async (
+    params: SubmitOrderParams,
+    onProgress?: ProgressCallback
+  ): Promise<HiddenOrder | null> => {
     setIsSubmitting(true);
     setError(null);
 
     try {
       const order = await submitHiddenOrder(params, {
         signAndExecuteTransaction: signAndExecute,
-      });
+      }, onProgress);
 
       addOrder(order);
       return order;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to submit order';
       setError(message);
-      return null;
+      throw err;
     } finally {
       setIsSubmitting(false);
     }
@@ -51,6 +55,7 @@ export function useDarkPool() {
 
   const cancelOrderByCommitment = useCallback(async (
     commitment: string,
+    onProgress?: ProgressCallback
   ): Promise<boolean> => {
     setIsSubmitting(true);
     setError(null);
@@ -58,14 +63,14 @@ export function useDarkPool() {
     try {
       await cancelOrder(commitment, {
         signAndExecuteTransaction: signAndExecute,
-      });
+      }, onProgress);
 
       updateOrderStatus(commitment, 'cancelled');
       return true;
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Failed to cancel order';
       setError(message);
-      return false;
+      throw err;
     } finally {
       setIsSubmitting(false);
     }
