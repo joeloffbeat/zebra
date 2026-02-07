@@ -44,16 +44,14 @@ export function Navbar() {
             ZEBRA
           </Link>
 
-          <nav className="flex-1 flex items-center justify-center gap-6">
+          <nav className="flex-1 flex items-center justify-center gap-4">
             {NAV_LINKS.map((link) => (
-              <Link
-                key={link.href}
-                href={link.href}
-                className={`text-xs tracking-widest transition-opacity hover:opacity-60 ${
-                  pathname === link.href ? "opacity-100" : "opacity-40"
-                }`}
-              >
-                {link.label}
+              <Link key={link.href} href={link.href}>
+                <Button
+                  className={pathname === link.href ? "opacity-100" : "opacity-40"}
+                >
+                  {link.label}
+                </Button>
               </Link>
             ))}
           </nav>

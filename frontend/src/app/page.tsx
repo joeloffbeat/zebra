@@ -99,13 +99,13 @@ export default function LandingPage() {
               <span className="text-sm tracking-widest">ZEBRA</span>
               <div className="flex items-center gap-4">
                 <Link href="/tee">
-                  <Button variant="outline">TEE</Button>
+                  <Button>TEE</Button>
                 </Link>
                 <Link href="/trade">
                   <Button>TRADE</Button>
                 </Link>
                 <Link href="/pitch">
-                  <Button variant="outline">PITCH</Button>
+                  <Button>PITCH</Button>
                 </Link>
               </div>
             </div>
