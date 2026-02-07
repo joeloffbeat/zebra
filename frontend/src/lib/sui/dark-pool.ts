@@ -11,8 +11,11 @@ export async function submitHiddenOrder(
   params: SubmitOrderParams,
   signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> }
 ): Promise<HiddenOrder> {
+  console.log('[ZEBRA] Starting order submission...', params);
+
   // Seal encryption is mandatory
   if (!SEAL_ALLOWLIST_ID) {
+    console.error('[ZEBRA] SEAL_ALLOWLIST_ID not configured');
     throw new Error('SEAL_ALLOWLIST_ID not configured — Seal encryption is mandatory');
   }
 
@@ -24,6 +27,7 @@ export async function submitHiddenOrder(
   const currentTime = BigInt(Math.floor(Date.now() / 1000));
   const poolId = 1n;
 
+  console.log('[ZEBRA] Generating ZK proof...');
   // Generate ZK proof
   const proofResult = await generateOrderProof({
     secret,
@@ -36,6 +40,7 @@ export async function submitHiddenOrder(
     currentTime,
     poolId,
   });
+  console.log('[ZEBRA] ZK proof generated:', proofResult.commitment.slice(0, 20) + '...');
 
   // Convert to Sui format (little-endian)
   const proofBytes = proofToSuiFormat(proofResult.proof);
@@ -43,6 +48,7 @@ export async function submitHiddenOrder(
   const commitmentBytes = hexToBytes(proofResult.commitment);
   const nullifierBytes = hexToBytes(proofResult.nullifier);
 
+  console.log('[ZEBRA] Encrypting order with Seal...');
   // Encrypt order details with Seal (mandatory)
   const { encryptedBytes } = await encryptOrderData(
     {
@@ -53,6 +59,7 @@ export async function submitHiddenOrder(
     SEAL_ALLOWLIST_ID,
   );
   const encryptedData = new Uint8Array(encryptedBytes);
+  console.log('[ZEBRA] Order encrypted, building transaction...');
 
   // Build transaction — unified submit_order, single type arg, splitCoins for locking
   const tx = new Transaction();
@@ -77,9 +84,11 @@ export async function submitHiddenOrder(
     typeArguments: ['0x2::sui::SUI'],
   });
 
+  console.log('[ZEBRA] Requesting signature...');
   const result = await signer.signAndExecuteTransaction({
     transaction: tx,
   });
+  console.log('[ZEBRA] Transaction submitted:', result.digest);
 
   return {
     id: crypto.randomUUID(),
