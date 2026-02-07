@@ -18,6 +18,7 @@ export interface DecryptedOrderData {
   amount: bigint;
   expiry: bigint;
   locked_amount?: bigint;
+  receivers?: { address: string; percentage: number }[];
 }
 
 export class SealService {
@@ -115,12 +116,29 @@ export class SealService {
       const dataStr = new TextDecoder().decode(decryptedBytes);
       const data = JSON.parse(dataStr);
 
+      // Parse receivers if present and valid
+      let receivers: { address: string; percentage: number }[] | undefined;
+      if (Array.isArray(data.receivers) && data.receivers.length > 0) {
+        const valid = data.receivers.every(
+          (r: any) => typeof r.address === 'string' && r.address.startsWith('0x') && r.address.length === 66
+            && typeof r.percentage === 'number' && r.percentage > 0
+        );
+        const sumPct = data.receivers.reduce((s: number, r: any) => s + (r.percentage || 0), 0);
+        if (valid && sumPct === 100) {
+          receivers = data.receivers;
+        } else {
+          console.warn('Invalid receivers in decrypted order, falling back to owner');
+          logService.addLog('warn', 'seal', 'Invalid receivers in decrypted order, falling back to owner');
+        }
+      }
+
       return {
         side: data.side,
         price: BigInt(data.price),
         amount: BigInt(data.amount),
         expiry: data.expiry ? BigInt(data.expiry) : 0n,
         locked_amount: data.locked_amount ? BigInt(data.locked_amount) : undefined,
+        receivers,
       };
     } catch (error) {
       console.error('Seal decryption failed:', error);

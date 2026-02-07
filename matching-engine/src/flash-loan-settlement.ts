@@ -7,6 +7,7 @@ import { bcs } from '@mysten/sui/bcs';
 import { config } from './config.js';
 import { logService } from './log-service.js';
 import { DecryptedOrderInfo } from './order-book.js';
+import { Receiver, resolveReceivers } from './receiver-utils.js';
 
 export interface FlashLoanSettlementResult {
   success: boolean;
@@ -122,15 +123,15 @@ export class FlashLoanSettlementService {
         minOut: 0,
       })(tx as any);
 
-      // 3. Extract seller's SUI from dark pool vault via settle_single
+      // 3. Extract seller's SUI from dark pool vault via settle_single_base
       const extractedSui = tx.moveCall({
-        target: `${config.darkPoolPackage}::dark_pool::settle_single`,
+        target: `${config.darkPoolPackage}::dark_pool::settle_single_base`,
         arguments: [
           tx.object(config.darkPoolObject),
           tx.object(config.matcherCapId),
           tx.pure(bcs.vector(bcs.u8()).serialize(commitmentBytes)),
         ],
-        typeArguments: ['0x2::sui::SUI'],
+        typeArguments: ['0x2::sui::SUI', config.dbUsdcType],
       });
 
       // 4. Return flash loan using extracted SUI from vault
@@ -142,8 +143,21 @@ export class FlashLoanSettlementService {
         flashLoan,
       )(tx as any);
 
-      // 5. Transfer USDC to seller
-      tx.transferObjects([usdcCoin], sell.owner);
+      // 5. Transfer USDC to seller's receivers
+      const receivers = resolveReceivers(sell.decryptedReceivers, sell.owner);
+      if (receivers.length === 1) {
+        tx.transferObjects([usdcCoin], receivers[0].address);
+      } else {
+        tx.moveCall({
+          target: `${config.darkPoolPackage}::dark_pool::split_and_distribute`,
+          arguments: [
+            usdcCoin,
+            tx.pure(bcs.vector(bcs.Address).serialize(receivers.map(r => r.address))),
+            tx.pure(bcs.vector(bcs.u64()).serialize(receivers.map(r => r.percentage))),
+          ],
+          typeArguments: [config.dbUsdcType],
+        });
+      }
 
       // 6. Transfer remaining base + deep refund + remainder to TEE address
       tx.transferObjects([remBase, deepRefund, remainderCoin], teeAddress);
@@ -200,13 +214,13 @@ export class FlashLoanSettlementService {
 
     // 3. Extract from vault
     const extractedSui = tx.moveCall({
-      target: `${config.darkPoolPackage}::dark_pool::settle_single`,
+      target: `${config.darkPoolPackage}::dark_pool::settle_single_base`,
       arguments: [
         tx.object(config.darkPoolObject),
         tx.object(config.matcherCapId),
         tx.pure(bcs.vector(bcs.u8()).serialize(commitmentBytes)),
       ],
-      typeArguments: ['0x2::sui::SUI'],
+      typeArguments: ['0x2::sui::SUI', config.dbUsdcType],
     });
 
     // 4. Repay flash loan
@@ -218,8 +232,21 @@ export class FlashLoanSettlementService {
       flashLoan,
     )(tx as any);
 
-    // 5. Transfer USDC to seller
-    tx.transferObjects([usdcCoin], sell.owner);
+    // 5. Transfer USDC to seller's receivers
+    const receivers = resolveReceivers(sell.decryptedReceivers, sell.owner);
+    if (receivers.length === 1) {
+      tx.transferObjects([usdcCoin], receivers[0].address);
+    } else {
+      tx.moveCall({
+        target: `${config.darkPoolPackage}::dark_pool::split_and_distribute`,
+        arguments: [
+          usdcCoin,
+          tx.pure(bcs.vector(bcs.Address).serialize(receivers.map(r => r.address))),
+          tx.pure(bcs.vector(bcs.u64()).serialize(receivers.map(r => r.percentage))),
+        ],
+        typeArguments: [config.dbUsdcType],
+      });
+    }
 
     // 6. Transfer leftovers + remainder to TEE
     tx.transferObjects([remBase, deepRefund, remainderCoin], teeAddress);

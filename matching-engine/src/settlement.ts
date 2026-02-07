@@ -7,6 +7,7 @@ import { config } from './config.js';
 import { Match } from './matcher.js';
 import { TeeAttestationService } from './tee-attestation.js';
 import { logService } from './log-service.js';
+import { resolveReceivers } from './receiver-utils.js';
 
 export class SettlementService {
   private client: SuiJsonRpcClient;
@@ -48,34 +49,40 @@ export class SettlementService {
       const tx = new Transaction();
       tx.setGasBudget(10_000_000);
 
-      // Convert commitment strings to byte vectors
       const commitmentABytes = this.hexStringToBytes(match.buyer.commitment);
       const commitmentBBytes = this.hexStringToBytes(match.seller.commitment);
 
-      // Calculate payouts (TEE computes, contract enforces solvency)
-      // Single-CoinType model (SUI/SUI): both sides lock the same token.
-      // Price is used for matching priority, not for cross-token exchange.
-      // Settlement redistributes locked SUI: each party gets back their locked amount.
-      // The "trade" is recorded on-chain via events — the matching is the value, not token swap.
+      // Cross-type settlement: buyer gets BaseCoin, seller gets QuoteCoin
+      // TEE determines payout amounts based on execution price
       const buyerLocked = match.buyer.decryptedLockedAmount;
       const sellerLocked = match.seller.decryptedLockedAmount;
 
-      // Solvency guaranteed: payoutA + payoutB == lockedA + lockedB
-      const payoutBuyer = buyerLocked;
-      const payoutSeller = sellerLocked;
+      // Buyer receives BaseCoin (seller's locked SUI)
+      const payoutBuyer = sellerLocked;
+      // Seller receives QuoteCoin (buyer's locked DBUSDC)
+      const payoutSeller = buyerLocked;
+
+      // Resolve receivers (fallback to owner if empty)
+      const buyerReceivers = resolveReceivers(match.buyer.decryptedReceivers, match.buyer.owner);
+      const sellerReceivers = resolveReceivers(match.seller.decryptedReceivers, match.seller.owner);
 
       tx.moveCall({
         target: `${config.darkPoolPackage}::dark_pool::settle_match`,
         arguments: [
-          tx.object(config.darkPoolObject),                                           // pool
-          tx.object(config.matcherCapId),                                             // matcher_cap
-          tx.pure(bcs.vector(bcs.u8()).serialize(commitmentABytes)),                  // commitment_a
-          tx.pure(bcs.vector(bcs.u8()).serialize(commitmentBBytes)),                  // commitment_b
-          tx.pure(bcs.u64().serialize(payoutBuyer)),                                  // payout_a
-          tx.pure(bcs.u64().serialize(payoutSeller)),                                 // payout_b
+          tx.object(config.darkPoolObject),
+          tx.object(config.matcherCapId),
+          tx.pure(bcs.vector(bcs.u8()).serialize(commitmentABytes)),
+          tx.pure(bcs.vector(bcs.u8()).serialize(commitmentBBytes)),
+          tx.pure(bcs.u64().serialize(payoutBuyer)),
+          tx.pure(bcs.u64().serialize(payoutSeller)),
+          tx.pure(bcs.vector(bcs.Address).serialize(buyerReceivers.map(r => r.address))),
+          tx.pure(bcs.vector(bcs.u64()).serialize(buyerReceivers.map(r => r.percentage))),
+          tx.pure(bcs.vector(bcs.Address).serialize(sellerReceivers.map(r => r.address))),
+          tx.pure(bcs.vector(bcs.u64()).serialize(sellerReceivers.map(r => r.percentage))),
         ],
         typeArguments: [
           '0x2::sui::SUI',
+          config.dbUsdcType,
         ],
       });
 

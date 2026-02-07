@@ -1,7 +1,7 @@
 import dotenv from 'dotenv';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { DARK_POOL_PACKAGE, DARK_POOL_OBJECT, MATCHER_CAP_ID, SEAL_PACKAGE_ID, SEAL_ALLOWLIST_ID } from './constants.js';
+import { DARK_POOL_PACKAGE, DARK_POOL_OBJECT, MATCHER_CAP_ID, SEAL_PACKAGE_ID, SEAL_ALLOWLIST_ID, DBUSDC_TYPE } from './constants.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -19,7 +19,8 @@ export const config = {
   matcherCapId: MATCHER_CAP_ID,
   sealPackageId: SEAL_PACKAGE_ID,
   sealAllowlistId: SEAL_ALLOWLIST_ID,
-  port: parseInt(process.env.PORT || '3001'),
+  dbUsdcType: DBUSDC_TYPE,
+  port: parseInt(process.env.PORT || '3006'),
   teeMode: process.env.TEE_MODE || 'local-dev',
   enclaveKeyPath: process.env.ENCLAVE_KEY_PATH || '/app/ecdsa.sec',
 };

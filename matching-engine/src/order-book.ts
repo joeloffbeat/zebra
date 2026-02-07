@@ -1,11 +1,13 @@
 import { CommittedOrder } from './sui-listener.js';
 import { logService } from './log-service.js';
+import { Receiver } from './receiver-utils.js';
 
 export interface DecryptedOrderInfo extends CommittedOrder {
   decryptedPrice: bigint;
   decryptedAmount: bigint;
   decryptedSide: number; // 0 = sell, 1 = buy
   decryptedLockedAmount: bigint;
+  decryptedReceivers: Receiver[];
 }
 
 export class OrderBook {

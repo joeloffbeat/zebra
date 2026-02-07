@@ -58,6 +58,7 @@ listener.on('orderCommitted', async (order: CommittedOrder) => {
       decryptedAmount: decrypted.amount,
       decryptedSide: decrypted.side,
       decryptedLockedAmount: decrypted.amount, // use decrypted amount as locked
+      decryptedReceivers: decrypted.receivers ?? [],
     };
 
     batchEngine.addOrder(enrichedOrder);
