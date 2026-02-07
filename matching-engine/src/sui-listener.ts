@@ -1,6 +1,7 @@
 import { SuiJsonRpcClient, SuiEventFilter, SuiEvent } from '@mysten/sui/jsonRpc';
 import { EventEmitter } from 'events';
 import { config } from './config.js';
+import { logService } from './log-service.js';
 
 // Privacy-stripped event — no isBid, no lockedAmount, no owner, no nullifier
 export interface CommittedOrder {
@@ -36,6 +37,7 @@ export class SuiEventListener extends EventEmitter {
   async start() {
     if (!config.darkPoolPackage) {
       console.log('Warning: DARK_POOL_PACKAGE not set, skipping event subscription');
+      logService.addLog('warn', 'listener', 'Warning: DARK_POOL_PACKAGE not set, skipping event subscription');
       return;
     }
 
@@ -44,11 +46,13 @@ export class SuiEventListener extends EventEmitter {
     // Skip past historical events — advance cursor to latest
     await this.advanceCursorToLatest();
     console.log('Polling for new OrderCommitted events...');
+    logService.addLog('info', 'listener', 'Polling for new OrderCommitted events...');
 
     // Poll every 2 seconds
     this.pollInterval = setInterval(() => {
       this.pollEvents().catch((error) => {
         console.error('Error polling events:', error);
+        logService.addLog('error', 'listener', `Error polling events: ${error}`);
       });
     }, 2000);
   }
@@ -69,11 +73,14 @@ export class SuiEventListener extends EventEmitter {
         const latest = result.data[0];
         this.lastCursor = { txDigest: latest.id.txDigest, eventSeq: latest.id.eventSeq };
         console.log(`Skipped past historical events (cursor: ${this.lastCursor.txDigest.slice(0, 12)}...)`);
+        logService.addLog('info', 'listener', `Skipped past historical events (cursor: ${this.lastCursor.txDigest.slice(0, 12)}...)`);
       } else {
         console.log('No historical events found, starting from beginning.');
+        logService.addLog('info', 'listener', 'No historical events found, starting from beginning.');
       }
     } catch (error) {
       console.error('Failed to advance cursor:', error);
+      logService.addLog('error', 'listener', `Failed to advance cursor: ${error}`);
     }
   }
 
@@ -112,6 +119,7 @@ export class SuiEventListener extends EventEmitter {
         };
         this.emit('orderCommitted', order);
         console.log(`Order committed: ${order.commitment.slice(0, 16)}...`);
+        logService.addLog('info', 'listener', `Order committed: ${order.commitment.slice(0, 16)}...`);
       }
 
       // Update cursor if there are results
@@ -120,6 +128,7 @@ export class SuiEventListener extends EventEmitter {
       }
     } catch (error) {
       console.error('Failed to query events:', error);
+      logService.addLog('error', 'listener', `Failed to query events: ${error}`);
     }
   }
 

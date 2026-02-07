@@ -1,4 +1,5 @@
 import { CommittedOrder } from './sui-listener.js';
+import { logService } from './log-service.js';
 
 export interface DecryptedOrderInfo extends CommittedOrder {
   decryptedPrice: bigint;
@@ -16,15 +17,18 @@ export class OrderBook {
     if (order.decryptedSide === 1) {
       this.bids.set(order.commitment, order);
       console.log(`Added BID: ${order.commitment.slice(0, 16)}... | ts=${order.timestamp}`);
+      logService.addLog('info', 'order-book', `Added BID: ${order.commitment.slice(0, 16)}... | ts=${order.timestamp}`);
     } else {
       this.asks.set(order.commitment, order);
       console.log(`Added ASK: ${order.commitment.slice(0, 16)}... | ts=${order.timestamp}`);
+      logService.addLog('info', 'order-book', `Added ASK: ${order.commitment.slice(0, 16)}... | ts=${order.timestamp}`);
     }
   }
 
   addPendingOrder(order: CommittedOrder) {
     this.pendingDecryption.set(order.commitment, order);
     console.log(`Queued pending decryption: ${order.commitment.slice(0, 16)}...`);
+    logService.addLog('info', 'order-book', `Queued pending decryption: ${order.commitment.slice(0, 16)}...`);
   }
 
   getPendingOrders(): CommittedOrder[] {

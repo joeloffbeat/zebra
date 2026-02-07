@@ -1,5 +1,6 @@
 import { OrderBook, DecryptedOrderInfo } from './order-book.js';
 import { DeepBookService } from './deepbook-service.js';
+import { logService } from './log-service.js';
 
 export interface Match {
   buyer: DecryptedOrderInfo;
@@ -69,6 +70,7 @@ export class OrderMatcher {
         console.log(`  Buyer:  ${bestBid.commitment.slice(0, 16)}...`);
         console.log(`  Seller: ${bestAsk.commitment.slice(0, 16)}...`);
         console.log('-------------------');
+        logService.addLog('info', 'matcher', `Match found: buyer=${bestBid.commitment.slice(0, 16)}... seller=${bestAsk.commitment.slice(0, 16)}...`);
 
         bidIdx++;
         askIdx++;
