@@ -7,6 +7,7 @@ import { Button } from "@/components/ui";
 import { WalletModal } from "@/components/modals";
 import { WalletDropdown } from "@/components/zebra/wallet-dropdown";
 import { useWallet } from "@/hooks/use-wallet";
+import { useEvmWallet } from "@/hooks/use-evm-wallet";
 import { useWalletStore } from "@/lib/stores/wallet-store";
 
 const NAV_LINKS = [
@@ -19,6 +20,7 @@ const NAV_LINKS = [
 export function Navbar() {
   const pathname = usePathname();
   const { address, isConnected, connect, disconnect } = useWallet();
+  const { evmAddress } = useEvmWallet();
   const { balance } = useWalletStore();
   const [walletModalOpen, setWalletModalOpen] = useState(false);
 
@@ -56,6 +58,7 @@ export function Navbar() {
             {isConnected && address ? (
               <WalletDropdown
                 suiAddress={address}
+                evmAddress={evmAddress}
                 balance={balance}
                 onDisconnect={disconnect}
               />

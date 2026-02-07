@@ -13,6 +13,7 @@ import {
 } from "@/components/ui";
 import { Navbar } from "@/components/zebra";
 import { useWallet } from "@/hooks/use-wallet";
+import { useEvmWallet } from "@/hooks/use-evm-wallet";
 import { useWalletStore } from "@/lib/stores/wallet-store";
 import { getQuoteArbToSui, executeBridge } from "@/lib/lifi/bridge";
 import type { BridgeQuote } from "@/lib/lifi/bridge";
@@ -34,6 +35,10 @@ const TOKENS = [
 
 type BridgeStatus = "idle" | "quoting" | "quoted" | "executing" | "success" | "error";
 
+function truncateAddress(address: string): string {
+  return `${address.slice(0, 6)}...${address.slice(-4)}`;
+}
+
 export default function DepositPage() {
   const [fromChain, setFromChain] = useState("arbitrum");
   const [fromToken, setFromToken] = useState("USDC");
@@ -43,8 +48,11 @@ export default function DepositPage() {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
-  const { address, isConnected } = useWallet();
+  const { address: suiAddress, isConnected: isSuiConnected } = useWallet();
+  const { evmAddress, isEvmConnected, loginWithPrivy } = useEvmWallet();
   const { balance } = useWalletStore();
+
+  const bothConnected = isEvmConnected && isSuiConnected;
 
   const handleNumericInput = (value: string) => {
     if (value === "" || /^\d*\.?\d*$/.test(value)) {
@@ -56,7 +64,7 @@ export default function DepositPage() {
 
   const handleGetQuote = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0) return;
-    if (!address) return;
+    if (!evmAddress || !suiAddress) return;
 
     setStatus("quoting");
     setError(null);
@@ -66,7 +74,7 @@ export default function DepositPage() {
       const decimals = token?.decimals || 6;
       const amountRaw = (parseFloat(amount) * Math.pow(10, decimals)).toString();
 
-      const result = await getQuoteArbToSui(amountRaw, address, address);
+      const result = await getQuoteArbToSui(amountRaw, evmAddress, suiAddress);
       setQuote(result);
       setStatus("quoted");
     } catch (err) {
@@ -74,7 +82,7 @@ export default function DepositPage() {
       setError(err instanceof Error ? err.message : 'Failed to get quote');
       setStatus("error");
     }
-  }, [amount, address, fromToken]);
+  }, [amount, evmAddress, suiAddress, fromToken]);
 
   const handleExecuteBridge = useCallback(async () => {
     if (!quote) return;
@@ -119,6 +127,12 @@ export default function DepositPage() {
             <div className="text-xs tracking-widest text-muted-foreground mb-4">
               FROM
             </div>
+
+            {isEvmConnected && evmAddress && (
+              <div className="text-[10px] tracking-wide text-muted-foreground mb-3 font-mono">
+                EVM: {truncateAddress(evmAddress)}
+              </div>
+            )}
 
             <div className="space-y-4">
               {/* CHAIN */}
@@ -171,11 +185,6 @@ export default function DepositPage() {
                     {fromToken}
                   </span>
                 </div>
-                {isConnected && (
-                  <div className="text-[10px] text-muted-foreground tracking-wide">
-                    SUI BALANCE: {balance.sui} SUI &middot; {balance.usdc} USDC
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -185,6 +194,12 @@ export default function DepositPage() {
             <div className="text-xs tracking-widest text-muted-foreground mb-4">
               TO
             </div>
+
+            {isSuiConnected && suiAddress && (
+              <div className="text-[10px] tracking-wide text-muted-foreground mb-3 font-mono">
+                SUI: {truncateAddress(suiAddress)}
+              </div>
+            )}
 
             <div className="flex items-center justify-between py-3 border-b border-border">
               <span className="text-xs tracking-widest">CHAIN</span>
@@ -284,16 +299,20 @@ export default function DepositPage() {
 
           {/* SUBMIT */}
           <div className="p-6">
-            {!isConnected ? (
+            {!isEvmConnected ? (
+              <Button className="w-full" size="lg" onClick={() => loginWithPrivy()}>
+                LOGIN WITH PRIVY
+              </Button>
+            ) : !isSuiConnected ? (
               <Button className="w-full" size="lg" disabled>
-                CONNECT WALLET
+                CONNECT SUI WALLET FIRST
               </Button>
             ) : status === "idle" || status === "error" ? (
               <Button
                 className="w-full"
                 size="lg"
                 onClick={handleGetQuote}
-                disabled={!amount || parseFloat(amount) <= 0}
+                disabled={!amount || parseFloat(amount) <= 0 || !bothConnected}
               >
                 GET QUOTE
               </Button>
@@ -338,7 +357,7 @@ export default function DepositPage() {
                 SUI
               </span>
               <span className="font-mono text-sm">
-                {isConnected ? `${balance.sui} SUI` : "\u2014"}
+                {isSuiConnected ? `${balance.sui} SUI` : "\u2014"}
               </span>
             </div>
             <div className="flex items-center justify-between">
@@ -346,7 +365,7 @@ export default function DepositPage() {
                 USDC
               </span>
               <span className="font-mono text-sm">
-                {isConnected ? `${balance.usdc} USDC` : "\u2014"}
+                {isSuiConnected ? `${balance.usdc} USDC` : "\u2014"}
               </span>
             </div>
           </div>

@@ -4,14 +4,9 @@ import { useState, useCallback } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui";
 
-interface WalletInfo {
-  chain: string;
-  address: string;
-}
-
 interface WalletDropdownProps {
   suiAddress: string | null;
-  embeddedWallets?: WalletInfo[];
+  evmAddress?: string | null;
   balance: { sui: string; usdc: string };
   onDisconnect: () => void;
 }
@@ -26,7 +21,7 @@ function copyToClipboard(text: string) {
 
 export function WalletDropdown({
   suiAddress,
-  embeddedWallets = [],
+  evmAddress,
   balance,
   onDisconnect,
 }: WalletDropdownProps) {
@@ -88,27 +83,27 @@ export function WalletDropdown({
               </div>
             )}
 
-            {/* Embedded Wallets */}
-            {embeddedWallets.map((w) => (
-              <div key={w.chain + w.address} className="p-3 border-b border-border">
+            {/* EVM Wallet */}
+            {evmAddress && (
+              <div className="p-3 border-b border-border">
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="text-[9px] tracking-widest text-muted-foreground">
-                      {w.chain.toUpperCase()}
+                      EVM
                     </div>
                     <div className="text-xs font-mono">
-                      {truncateAddress(w.address)}
+                      {truncateAddress(evmAddress)}
                     </div>
                   </div>
                   <button
-                    onClick={() => handleCopy(w.address)}
+                    onClick={() => handleCopy(evmAddress)}
                     className="text-[9px] tracking-widest text-muted-foreground hover:text-foreground"
                   >
-                    {copiedAddr === w.address ? "COPIED" : "COPY"}
+                    {copiedAddr === evmAddress ? "COPIED" : "COPY"}
                   </button>
                 </div>
               </div>
-            ))}
+            )}
 
             {/* Actions */}
             <div className="p-3 flex items-center justify-between">

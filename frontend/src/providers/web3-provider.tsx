@@ -1,13 +1,15 @@
 'use client';
 
 import { PrivyProvider } from '@privy-io/react-auth';
-import { WagmiProvider } from '@privy-io/wagmi';
+import { WagmiProvider as PrivyWagmiProvider } from '@privy-io/wagmi';
+import { WagmiProvider } from 'wagmi';
 import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@mysten/dapp-kit';
 import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useState, useEffect } from 'react';
+import { useWalletClient } from 'wagmi';
 import { wagmiConfig } from '@/lib/wagmi';
-import { initLiFi } from '@/lib/lifi/sdk';
+import { initLiFi, setLiFiWalletClient } from '@/lib/lifi/sdk';
 
 const { networkConfig } = createNetworkConfig({
   mainnet: { url: getJsonRpcFullnodeUrl('mainnet'), network: 'mainnet' },
@@ -16,6 +18,18 @@ const { networkConfig } = createNetworkConfig({
 
 interface Web3ProviderProps {
   children: ReactNode;
+}
+
+function LiFiWalletSync() {
+  const { data: walletClient } = useWalletClient();
+
+  useEffect(() => {
+    if (walletClient) {
+      setLiFiWalletClient(walletClient);
+    }
+  }, [walletClient]);
+
+  return null;
 }
 
 export function Web3Provider({ children }: Web3ProviderProps) {
@@ -41,11 +55,14 @@ export function Web3Provider({ children }: Web3ProviderProps) {
     // Fallback to non-Privy provider stack if no Privy app ID configured
     return (
       <QueryClientProvider client={queryClient}>
-        <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
-          <WalletProvider autoConnect>
-            {children}
-          </WalletProvider>
-        </SuiClientProvider>
+        <WagmiProvider config={wagmiConfig}>
+          <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
+            <WalletProvider autoConnect>
+              <LiFiWalletSync />
+              {children}
+            </WalletProvider>
+          </SuiClientProvider>
+        </WagmiProvider>
       </QueryClientProvider>
     );
   }
@@ -66,13 +83,14 @@ export function Web3Provider({ children }: Web3ProviderProps) {
       }}
     >
       <QueryClientProvider client={queryClient}>
-        <WagmiProvider config={wagmiConfig}>
+        <PrivyWagmiProvider config={wagmiConfig}>
           <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
             <WalletProvider autoConnect>
+              <LiFiWalletSync />
               {children}
             </WalletProvider>
           </SuiClientProvider>
-        </WagmiProvider>
+        </PrivyWagmiProvider>
       </QueryClientProvider>
     </PrivyProvider>
   );
