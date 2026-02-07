@@ -152,8 +152,8 @@ export class FlashLoanSettlementService {
           target: `${config.darkPoolPackage}::dark_pool::split_and_distribute`,
           arguments: [
             usdcCoin,
-            tx.pure(bcs.vector(bcs.Address).serialize(receivers.map(r => r.address))),
-            tx.pure(bcs.vector(bcs.u64()).serialize(receivers.map(r => r.percentage))),
+            tx.pure.vector('address', receivers.map(r => r.address)),
+            tx.pure.vector('u64', receivers.map(r => r.percentage)),
           ],
           typeArguments: [config.dbUsdcType],
         });
@@ -241,8 +241,8 @@ export class FlashLoanSettlementService {
         target: `${config.darkPoolPackage}::dark_pool::split_and_distribute`,
         arguments: [
           usdcCoin,
-          tx.pure(bcs.vector(bcs.Address).serialize(receivers.map(r => r.address))),
-          tx.pure(bcs.vector(bcs.u64()).serialize(receivers.map(r => r.percentage))),
+          tx.pure.vector('address', receivers.map(r => r.address)),
+          tx.pure.vector('u64', receivers.map(r => r.percentage)),
         ],
         typeArguments: [config.dbUsdcType],
       });
