@@ -38,10 +38,10 @@ function TxRow({ label, digest }: { label: string; digest: string }) {
         href={`https://suiscan.xyz/testnet/tx/${digest}`}
         target="_blank"
         rel="noopener noreferrer"
-        className="shrink-0 p-1 border border-border hover:bg-muted/50 transition-colors"
+        className="shrink-0 p-1 hover:opacity-60 transition-opacity"
         title={`View ${label} on SuiScan`}
       >
-        <ExternalLink className="w-3 h-3 text-blue-400" />
+        <ExternalLink className="w-3 h-3" />
       </a>
     </div>
   );

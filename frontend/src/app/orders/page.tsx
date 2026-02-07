@@ -297,30 +297,32 @@ export default function OrdersPage() {
       />
 
       {/* MATCH NOTIFICATION MODAL */}
-      {latestMatch && (
-        <MatchNotificationModal
-          open={showMatchModal}
-          onOpenChange={setShowMatchModal}
-          match={{
-            yourOrder: { side: "\u2014", amount: "\u2014", price: "\u2014" },
-            matchedWith: { side: "\u2014", amount: "\u2014", price: "\u2014" },
-            executionPrice: "HIDDEN",
-            via: "TEE MATCHER",
-            settlement: latestMatch.settled ? "COMPLETE" : "PENDING",
-            progress: latestMatch.settled ? 100 : 50,
-            status: latestMatch.settled ? "SETTLED" : "MATCHING",
-          }}
-          onViewTransaction={() => {
-            if (latestMatch.settlementDigest) {
-              window.open(
-                `https://suiscan.xyz/testnet/tx/${latestMatch.settlementDigest}`,
-                "_blank"
-              );
-            }
-            setShowMatchModal(false);
-          }}
-        />
-      )}
+      {latestMatch && (() => {
+        const strip = (s: string) =>
+          s.replace(/\.{3}$/, '').replace(/^0x/i, '').toLowerCase();
+        const matchedOrder = orders.find(o => {
+          const p = strip(o.commitment.slice(0, 20));
+          const a = strip(latestMatch.commitmentAPrefix);
+          const b = strip(latestMatch.commitmentBPrefix);
+          return p.startsWith(a) || a.startsWith(p) || p.startsWith(b) || b.startsWith(p);
+        });
+        const isDeepBook = latestMatch.commitmentBPrefix.startsWith("deepbook:");
+        return (
+          <MatchNotificationModal
+            open={showMatchModal}
+            onOpenChange={setShowMatchModal}
+            match={{
+              side: matchedOrder ? matchedOrder.side.toUpperCase() : "\u2014",
+              amount: matchedOrder ? `${(Number(matchedOrder.amount) / 1e9).toFixed(4)} SUI` : "\u2014",
+              settlementType: isDeepBook ? "DEEPBOOK FLASH LOAN" : "TEE MATCHER",
+              settlement: latestMatch.settled ? "COMPLETE" : "PENDING",
+              progress: latestMatch.settled ? 100 : 50,
+              status: latestMatch.settled ? "SETTLED" : "MATCHING",
+              settlementDigest: latestMatch.settlementDigest,
+            }}
+          />
+        );
+      })()}
     </div>
   );
 }

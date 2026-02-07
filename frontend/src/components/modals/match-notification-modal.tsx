@@ -1,5 +1,6 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -14,88 +15,57 @@ interface MatchNotificationModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   match: {
-    yourOrder: {
-      side: string;
-      amount: string;
-      price: string;
-    };
-    matchedWith: {
-      side: string;
-      amount: string;
-      price: string;
-    };
-    executionPrice: string;
-    via: string;
+    side: string;
+    amount: string;
+    settlementType: string;
     settlement: string;
-    progress: number;
     status: string;
+    progress: number;
+    settlementDigest?: string | null;
   };
-  onViewTransaction: () => void;
 }
 
 export function MatchNotificationModal({
   open,
   onOpenChange,
   match,
-  onViewTransaction,
 }: MatchNotificationModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>ORDER MATCHED</DialogTitle>
+          <DialogTitle>ORDER SETTLED</DialogTitle>
           <DialogDescription>
-            YOUR HIDDEN ORDER HAS BEEN MATCHED
+            YOUR HIDDEN ORDER HAS BEEN MATCHED AND SETTLED
           </DialogDescription>
         </DialogHeader>
 
         <div className="p-6 space-y-4">
-          {/* ORDER COMPARISON */}
-          <div className="grid grid-cols-[1fr,auto,1fr] gap-2 items-center">
-            {/* YOUR ORDER */}
-            <div className="border border-border p-3 text-center">
-              <p className="text-[10px] tracking-widest text-muted-foreground">
-                YOUR ORDER
-              </p>
-              <p className="text-xs tracking-widest mt-2">
-                {match.yourOrder.side} {match.yourOrder.amount}
-              </p>
-              <p className="font-mono text-[10px] mt-1">@ {match.yourOrder.price}</p>
+          {/* YOUR ORDER */}
+          <div className="space-y-1 text-xs">
+            <div className="flex justify-between">
+              <span className="tracking-widest text-muted-foreground">SIDE</span>
+              <span className="font-mono">{match.side}</span>
             </div>
-
-            {/* ARROW */}
-            <div className="text-xs text-muted-foreground">&harr;</div>
-
-            {/* MATCHED WITH */}
-            <div className="border border-border p-3 text-center">
-              <p className="text-[10px] tracking-widest text-muted-foreground">
-                MATCHED WITH
-              </p>
-              <p className="text-xs tracking-widest mt-2">
-                {match.matchedWith.side} {match.matchedWith.amount}
-              </p>
-              <p className="font-mono text-[10px] mt-1">
-                @ {match.matchedWith.price}
-              </p>
+            <div className="flex justify-between">
+              <span className="tracking-widest text-muted-foreground">AMOUNT</span>
+              <span className="font-mono">{match.amount}</span>
             </div>
-          </div>
-
-          {/* EXECUTION PRICE */}
-          <div className="border border-border p-4 text-center bg-foreground text-background">
-            <p className="text-[10px] tracking-widest">
-              EXECUTION PRICE
-            </p>
-            <p className="font-mono text-lg mt-1">{match.executionPrice}</p>
-            <p className="text-[10px] tracking-wide opacity-70 mt-1">
-              (MIDPOINT)
-            </p>
           </div>
 
           {/* EXECUTION INFO */}
-          <div className="space-y-1 text-xs">
+          <div className="border-t border-border pt-4 space-y-1 text-xs">
             <div className="flex justify-between">
-              <span className="tracking-widest text-muted-foreground">EXECUTION VIA</span>
-              <span className="font-mono">{match.via}</span>
+              <span className="tracking-widest text-muted-foreground">COUNTERPARTY</span>
+              <span className="font-mono">HIDDEN</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="tracking-widest text-muted-foreground">EXECUTION PRICE</span>
+              <span className="font-mono">HIDDEN</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="tracking-widest text-muted-foreground">SETTLED VIA</span>
+              <span className="font-mono">{match.settlementType}</span>
             </div>
             <div className="flex justify-between">
               <span className="tracking-widest text-muted-foreground">SETTLEMENT</span>
@@ -106,7 +76,7 @@ export function MatchNotificationModal({
           {/* PROGRESS */}
           <div className="space-y-2">
             <div className="flex justify-between text-[10px] tracking-widest">
-              <span className="text-muted-foreground">PROGRESS</span>
+              <span className="text-muted-foreground">STATUS</span>
               <span>{match.status}</span>
             </div>
             <div className="h-1 bg-border">
@@ -116,11 +86,34 @@ export function MatchNotificationModal({
               />
             </div>
           </div>
+
+          {/* SETTLEMENT TX */}
+          {match.settlementDigest && (
+            <div className="border-t border-border pt-4">
+              <p className="text-[10px] tracking-widest text-muted-foreground mb-1">
+                SETTLEMENT TX
+              </p>
+              <div className="flex items-center gap-2">
+                <p className="text-[9px] font-mono text-foreground/80 break-all flex-1">
+                  {match.settlementDigest}
+                </p>
+                <a
+                  href={`https://suiscan.xyz/testnet/tx/${match.settlementDigest}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="shrink-0 p-1 hover:opacity-60 transition-opacity"
+                  title="View on SuiScan"
+                >
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
+          )}
         </div>
 
         <DialogFooter>
-          <Button className="w-full" onClick={onViewTransaction}>
-            VIEW TRANSACTION
+          <Button className="w-full" onClick={() => onOpenChange(false)}>
+            CLOSE
           </Button>
         </DialogFooter>
       </DialogContent>
