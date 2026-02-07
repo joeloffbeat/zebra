@@ -22,15 +22,20 @@ export function useOrderStatus() {
         const orderStatus = order.status as string;
         if (orderStatus === 'settled' || orderStatus === 'cancelled') continue;
 
-        // Normalize: strip 0x, lowercase, remove trailing "..." for comparison
-        const normalize = (s: string) =>
+        // Backend commitment has 0x prefix, frontend doesn't.
+        // Backend prefix = "0x8730771963424836".slice(0,16)+"..." = "0x87307719634248..."
+        // Frontend commitment = "8730771963424836..."
+        // After stripping 0x and "...", lengths differ (14 vs 16), so use startsWith.
+        const strip = (s: string) =>
           s.replace(/\.{3}$/, '').replace(/^0x/i, '').toLowerCase();
 
-        const orderPrefix = normalize(order.commitment.slice(0, 16));
+        const orderPrefix = strip(order.commitment.slice(0, 20));
+        const prefixA = strip(match.commitmentAPrefix);
+        const prefixB = strip(match.commitmentBPrefix);
 
         const isMatch =
-          normalize(match.commitmentAPrefix) === orderPrefix ||
-          normalize(match.commitmentBPrefix) === orderPrefix;
+          orderPrefix.startsWith(prefixA) || prefixA.startsWith(orderPrefix) ||
+          orderPrefix.startsWith(prefixB) || prefixB.startsWith(orderPrefix);
 
         if (isMatch) {
           // DeepBook flash loan settlements have "deepbook:" prefix in commitmentB

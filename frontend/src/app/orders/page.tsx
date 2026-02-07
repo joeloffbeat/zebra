@@ -54,15 +54,17 @@ export default function OrdersPage() {
   // Find settlement digest for an order by matching commitment prefix
   const findSettlementDigest = (commitment: string): string | undefined => {
     if (!matches.data) return undefined;
-    // Normalize: strip 0x, lowercase, remove trailing "..." for comparison
-    const normalize = (s: string) =>
+    // Backend commitment has 0x prefix, frontend doesn't.
+    // After stripping 0x and "...", lengths differ (14 vs 16), so use startsWith.
+    const strip = (s: string) =>
       s.replace(/\.{3}$/, '').replace(/^0x/i, '').toLowerCase();
-    const orderPrefix = normalize(commitment.slice(0, 16));
-    const match = matches.data.find(
-      (m) =>
-        normalize(m.commitmentAPrefix) === orderPrefix ||
-        normalize(m.commitmentBPrefix) === orderPrefix
-    );
+    const orderPrefix = strip(commitment.slice(0, 20));
+    const match = matches.data.find((m) => {
+      const a = strip(m.commitmentAPrefix);
+      const b = strip(m.commitmentBPrefix);
+      return orderPrefix.startsWith(a) || a.startsWith(orderPrefix) ||
+             orderPrefix.startsWith(b) || b.startsWith(orderPrefix);
+    });
     return match?.settlementDigest;
   };
 
