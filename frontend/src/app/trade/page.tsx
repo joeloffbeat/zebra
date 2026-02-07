@@ -68,8 +68,10 @@ export default function TradePage() {
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [showCancelModal, setShowCancelModal] = useState(false);
   const [cancelCommitment, setCancelCommitment] = useState("");
+  const [receivers, setReceivers] = useState<{ address: string; percentage: string }[]>([]);
+  const [showReceivers, setShowReceivers] = useState(false);
 
-  const { isConnected } = useWallet();
+  const { isConnected, address } = useWallet();
   const { balance } = useWalletStore();
   const { submitOrder, cancelOrder, isSubmitting, orders } = useDarkPool();
   const { matches, teeMetrics, midPrice: midPriceQuery, batchStatus } = useBackend();
@@ -132,8 +134,22 @@ export default function TradePage() {
       setSubmitError("ENTER A VALID PRICE");
       return;
     }
+    // Validate receivers if specified
+    if (receivers.length > 0) {
+      const sum = receivers.reduce((s, r) => s + (parseInt(r.percentage) || 0), 0);
+      if (sum !== 100) {
+        setSubmitError("RECEIVER PERCENTAGES MUST SUM TO 100");
+        return;
+      }
+      const hasInvalid = receivers.some(r => !r.address || !r.address.startsWith("0x") || r.address.length !== 66);
+      if (hasInvalid) {
+        setSubmitError("INVALID RECEIVER ADDRESS FORMAT");
+        return;
+      }
+    }
+
     setShowConfirmModal(true);
-  }, [isConnected, amount, price]);
+  }, [isConnected, amount, price, receivers]);
 
   const handleConfirmOrder = useCallback(async (onProgress: ProgressCallback) => {
     setSubmitError(null);
@@ -145,12 +161,18 @@ export default function TradePage() {
       Math.floor(Date.now() / 1000) + EXPIRY_TO_SECONDS[expiry]
     );
 
+    // Parse receivers if specified
+    const parsedReceivers = receivers.length > 0
+      ? receivers.map(r => ({ address: r.address, percentage: parseInt(r.percentage) || 0 }))
+      : undefined;
+
     const order = await submitOrder({
       side: side.toLowerCase() as "buy" | "sell",
       amount: amountMist,
       price: priceMist,
       expiry: expiryTime,
-    }, onProgress);
+      receivers: parsedReceivers,
+    }, onProgress, address ?? undefined);
 
     if (order) {
       setSubmitSuccess(true);
@@ -160,7 +182,7 @@ export default function TradePage() {
     }
 
     return order;
-  }, [amount, price, side, expiry, submitOrder]);
+  }, [amount, price, side, expiry, submitOrder, receivers]);
 
   const handleCancel = useCallback(
     (commitment: string) => {
@@ -189,7 +211,7 @@ export default function TradePage() {
         {/* MARKET INFO BAR */}
         <div className="flex items-center gap-8 mb-8 pb-4 border-b border-border">
           <div className="flex items-center gap-4 text-xs tracking-wide">
-            <span className="opacity-100">SUI/USD</span>
+            <span className="opacity-100">SUI/DBUSDC</span>
             <span className="font-mono text-muted-foreground">
               {midPriceValue ? `${midPriceValue}` : "\u2014"}
             </span>
@@ -242,6 +264,11 @@ export default function TradePage() {
                 {isConnected ? `${balance.sui} SUI` : "\u2014"}
               </span>
             </div>
+            <div>
+              <span className="font-mono text-sm">
+                {isConnected ? `${balance.dbusdc} DBUSDC` : ""}
+              </span>
+            </div>
           </div>
           {isConnected && (
             <span className="text-[10px] tracking-wide text-muted-foreground">
@@ -265,7 +292,7 @@ export default function TradePage() {
               <div className="space-y-2">
                 <Label>PAIR</Label>
                 <div className="text-xs tracking-widest border border-border p-3 text-muted-foreground">
-                  SUI / USD (TESTNET)
+                  SUI / DBUSDC (TESTNET)
                 </div>
               </div>
 
@@ -336,7 +363,7 @@ export default function TradePage() {
               {/* PRICE */}
               <div className="space-y-2">
                 <Label>
-                  {orderType === "MARKET" ? "MARKET PRICE (USD)" : "LIMIT PRICE (USD)"}
+                  {orderType === "MARKET" ? "MARKET PRICE (DBUSDC)" : "LIMIT PRICE (DBUSDC)"}
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -349,7 +376,7 @@ export default function TradePage() {
                     disabled={orderType === "MARKET"}
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
-                    USD
+                    DBUSDC
                   </span>
                 </div>
                 {orderType === "MARKET" && (
@@ -379,13 +406,80 @@ export default function TradePage() {
                 </Select>
               </div>
 
+              {/* RECEIVER ROUTING */}
+              <div className="space-y-2">
+                <button
+                  type="button"
+                  onClick={() => setShowReceivers(!showReceivers)}
+                  className="text-[10px] tracking-widest text-muted-foreground hover:opacity-60"
+                >
+                  {showReceivers ? "[-] RECEIVER ROUTING" : "[+] RECEIVER ROUTING"}
+                </button>
+                {showReceivers && (
+                  <div className="space-y-3 border border-border p-4">
+                    <p className="text-[9px] tracking-wide text-muted-foreground">
+                      SPLIT PAYOUT TO MULTIPLE ADDRESSES. LEAVE EMPTY FOR DEFAULT (YOUR WALLET).
+                    </p>
+                    {receivers.map((r, idx) => (
+                      <div key={idx} className="flex items-center gap-2">
+                        <Input
+                          type="text"
+                          placeholder="0x..."
+                          value={r.address}
+                          onChange={(e) => {
+                            const updated = [...receivers];
+                            updated[idx] = { ...updated[idx], address: e.target.value };
+                            setReceivers(updated);
+                          }}
+                          className="flex-1 text-xs font-mono"
+                        />
+                        <Input
+                          type="text"
+                          inputMode="numeric"
+                          placeholder="%"
+                          value={r.percentage}
+                          onChange={(e) => {
+                            const updated = [...receivers];
+                            updated[idx] = { ...updated[idx], percentage: e.target.value };
+                            setReceivers(updated);
+                          }}
+                          className="w-16 text-xs"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setReceivers(receivers.filter((_, i) => i !== idx))}
+                          className="text-xs text-muted-foreground hover:text-red-500"
+                        >
+                          [X]
+                        </button>
+                      </div>
+                    ))}
+                    <button
+                      type="button"
+                      onClick={() => setReceivers([...receivers, { address: "", percentage: "" }])}
+                      className="text-[10px] tracking-widest text-muted-foreground hover:opacity-60"
+                    >
+                      [+ ADD RECEIVER]
+                    </button>
+                    {receivers.length > 0 && (() => {
+                      const sum = receivers.reduce((s, r) => s + (parseInt(r.percentage) || 0), 0);
+                      return sum !== 100 ? (
+                        <p className="text-[9px] text-red-500">
+                          PERCENTAGES MUST SUM TO 100 (CURRENT: {sum})
+                        </p>
+                      ) : null;
+                    })()}
+                  </div>
+                )}
+              </div>
+
               {/* ORDER VALUE */}
               <div className="py-4 border-t border-border">
                 <div className="flex justify-between text-xs">
                   <span className="tracking-widest text-muted-foreground">
                     ORDER VALUE
                   </span>
-                  <span className="font-mono">{orderValue} USD</span>
+                  <span className="font-mono">{orderValue} DBUSDC</span>
                 </div>
               </div>
 
@@ -648,9 +742,13 @@ export default function TradePage() {
           side: side,
           amount: amount,
           token: "SUI",
-          price: `${price} USD`,
-          total: `${orderValue} USD`,
+          price: `${price} DBUSDC`,
+          total: `${orderValue} DBUSDC`,
           expiry: EXPIRY_LABELS[expiry],
+          receivers: receivers.length > 0 ? receivers.map(r => ({
+            address: r.address,
+            percentage: parseInt(r.percentage) || 0,
+          })) : undefined,
         }}
         onConfirm={handleConfirmOrder}
       />

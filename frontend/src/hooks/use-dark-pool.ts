@@ -32,7 +32,8 @@ export function useDarkPool() {
 
   const submitOrder = useCallback(async (
     params: SubmitOrderParams,
-    onProgress?: ProgressCallback
+    onProgress?: ProgressCallback,
+    walletAddress?: string
   ): Promise<HiddenOrder | null> => {
     setIsSubmitting(true);
     setError(null);
@@ -40,7 +41,7 @@ export function useDarkPool() {
     try {
       const order = await submitHiddenOrder(params, {
         signAndExecuteTransaction: signAndExecute,
-      }, onProgress);
+      }, onProgress, walletAddress);
 
       addOrder(order);
       return order;

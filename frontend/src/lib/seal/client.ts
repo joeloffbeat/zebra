@@ -30,6 +30,7 @@ export interface OrderData {
   side: number; // 0 = sell, 1 = buy
   price: bigint;
   amount: bigint;
+  receivers?: { address: string; percentage: number }[];
 }
 
 export interface EncryptedOrderResult {
@@ -49,6 +50,7 @@ export async function encryptOrderData(
     side: orderData.side,
     price: orderData.price.toString(),
     amount: orderData.amount.toString(),
+    ...(orderData.receivers && orderData.receivers.length > 0 ? { receivers: orderData.receivers } : {}),
   });
   const dataBytes = encoder.encode(dataStr);
 

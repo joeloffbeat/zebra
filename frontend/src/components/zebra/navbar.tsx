@@ -59,7 +59,7 @@ export function Navbar() {
           <div className="flex items-center gap-4">
             {isConnected && address && (
               <span className="text-[10px] tracking-wide text-muted-foreground font-mono">
-                {balance.sui} SUI
+                {balance.sui} SUI &middot; {balance.dbusdc} DBUSDC
               </span>
             )}
             <Button onClick={handleWalletClick}>

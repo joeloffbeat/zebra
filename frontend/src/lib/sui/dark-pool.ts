@@ -1,36 +1,33 @@
 import { Transaction } from '@mysten/sui/transactions';
 import { bcs } from '@mysten/sui/bcs';
-import { CONTRACTS } from './client';
+import { CONTRACTS, suiClient } from './client';
 import { SubmitOrderParams, HiddenOrder } from './types';
 import { generateOrderProof, proofToSuiFormat, publicSignalsToSuiFormat, hexToBytes } from '../zk/prover';
 import { encryptOrderData } from '../seal/client';
-import { SEAL_ALLOWLIST_ID } from '../constants';
+import { SEAL_ALLOWLIST_ID, DBUSDC_TYPE } from '../constants';
 import type { ProgressCallback } from './progress-types';
 
 export async function submitHiddenOrder(
   params: SubmitOrderParams,
   signer: { signAndExecuteTransaction: (args: { transaction: Transaction }) => Promise<{ digest: string }> },
-  onProgress?: ProgressCallback
+  onProgress?: ProgressCallback,
+  walletAddress?: string
 ): Promise<HiddenOrder> {
   console.log('[ZEBRA] Starting order submission...', params);
 
-  // Seal encryption is mandatory
   if (!SEAL_ALLOWLIST_ID) {
     console.error('[ZEBRA] SEAL_ALLOWLIST_ID not configured');
     throw new Error('SEAL_ALLOWLIST_ID not configured — Seal encryption is mandatory');
   }
 
-  // Generate random secret and nonce
   const secretBytes = crypto.getRandomValues(new Uint8Array(31));
   const secret = BigInt('0x' + Array.from(secretBytes).map(b => b.toString(16).padStart(2, '0')).join(''));
   const nonce = BigInt(Date.now());
-
   const currentTime = BigInt(Math.floor(Date.now() / 1000));
   const poolId = 1n;
 
   onProgress?.("zk-proof", "active");
   console.log('[ZEBRA] Generating ZK proof...');
-  // Generate ZK proof
   const proofResult = await generateOrderProof({
     secret,
     side: params.side === 'buy' ? 1 : 0,
@@ -45,7 +42,6 @@ export async function submitHiddenOrder(
   console.log('[ZEBRA] ZK proof generated:', proofResult.commitment.slice(0, 20) + '...');
   onProgress?.("zk-proof", "complete");
 
-  // Convert to Sui format (little-endian)
   const proofBytes = proofToSuiFormat(proofResult.proof);
   const publicInputBytes = publicSignalsToSuiFormat(proofResult.publicSignals);
   const commitmentBytes = hexToBytes(proofResult.commitment);
@@ -53,12 +49,12 @@ export async function submitHiddenOrder(
 
   onProgress?.("seal-encrypt", "active");
   console.log('[ZEBRA] Encrypting order with Seal...');
-  // Encrypt order details with Seal (mandatory)
   const { encryptedBytes } = await encryptOrderData(
     {
       side: params.side === 'buy' ? 1 : 0,
       price: params.price,
       amount: params.amount,
+      receivers: params.receivers,
     },
     SEAL_ALLOWLIST_ID,
   );
@@ -66,31 +62,68 @@ export async function submitHiddenOrder(
   console.log('[ZEBRA] Order encrypted, building transaction...');
   onProgress?.("seal-encrypt", "complete");
 
-  // Build transaction — unified submit_order, single type arg, splitCoins for locking
   const tx = new Transaction();
   tx.setGasBudget(10_000_000);
-
   const vecU8 = bcs.vector(bcs.u8());
 
-  // Split exact amount from gas coin for locking
-  const [lockCoin] = tx.splitCoins(tx.gas, [params.amount]);
+  if (params.side === 'sell') {
+    // SELL: lock SUI (BaseCoin) — split from gas
+    const [lockCoin] = tx.splitCoins(tx.gas, [params.amount]);
 
-  tx.moveCall({
-    target: `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_order`,
-    arguments: [
-      tx.object(CONTRACTS.DARK_POOL_OBJECT),
-      lockCoin,
-      tx.pure(vecU8.serialize(Array.from(proofBytes))),
-      tx.pure(vecU8.serialize(Array.from(publicInputBytes))),
-      tx.pure(vecU8.serialize(Array.from(commitmentBytes))),
-      tx.pure(vecU8.serialize(Array.from(nullifierBytes))),
-      tx.pure(vecU8.serialize(Array.from(encryptedData))),
-    ],
-    typeArguments: ['0x2::sui::SUI'],
-  });
+    tx.moveCall({
+      target: `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_sell_order`,
+      arguments: [
+        tx.object(CONTRACTS.DARK_POOL_OBJECT),
+        lockCoin,
+        tx.pure(vecU8.serialize(Array.from(proofBytes))),
+        tx.pure(vecU8.serialize(Array.from(publicInputBytes))),
+        tx.pure(vecU8.serialize(Array.from(commitmentBytes))),
+        tx.pure(vecU8.serialize(Array.from(nullifierBytes))),
+        tx.pure(vecU8.serialize(Array.from(encryptedData))),
+      ],
+      typeArguments: ['0x2::sui::SUI', DBUSDC_TYPE],
+    });
+  } else {
+    // BUY: lock DBUSDC (QuoteCoin)
+    if (!walletAddress) {
+      throw new Error('Wallet address required for BUY orders');
+    }
+
+    const dbUsdcCoins = await suiClient.getCoins({
+      owner: walletAddress,
+      coinType: DBUSDC_TYPE,
+    });
+
+    if (dbUsdcCoins.data.length === 0) {
+      throw new Error('No DBUSDC tokens found in wallet. Get DBUSDC from DeepBook testnet faucet.');
+    }
+
+    const primaryCoin = tx.object(dbUsdcCoins.data[0].coinObjectId);
+
+    if (dbUsdcCoins.data.length > 1) {
+      const otherCoins = dbUsdcCoins.data.slice(1).map(c => tx.object(c.coinObjectId));
+      tx.mergeCoins(primaryCoin, otherCoins);
+    }
+
+    const [lockCoin] = tx.splitCoins(primaryCoin, [params.amount]);
+
+    tx.moveCall({
+      target: `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_buy_order`,
+      arguments: [
+        tx.object(CONTRACTS.DARK_POOL_OBJECT),
+        lockCoin,
+        tx.pure(vecU8.serialize(Array.from(proofBytes))),
+        tx.pure(vecU8.serialize(Array.from(publicInputBytes))),
+        tx.pure(vecU8.serialize(Array.from(commitmentBytes))),
+        tx.pure(vecU8.serialize(Array.from(nullifierBytes))),
+        tx.pure(vecU8.serialize(Array.from(encryptedData))),
+      ],
+      typeArguments: ['0x2::sui::SUI', DBUSDC_TYPE],
+    });
+  }
 
   console.log('[ZEBRA] Requesting signature...');
-  console.log('[ZEBRA] Transaction target:', `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_order`);
+  console.log('[ZEBRA] Transaction target:', `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_${params.side === 'sell' ? 'sell' : 'buy'}_order`);
   console.log('[ZEBRA] Pool object:', CONTRACTS.DARK_POOL_OBJECT);
 
   onProgress?.("submit-tx", "active");
@@ -120,6 +153,7 @@ export async function submitHiddenOrder(
     amount: params.amount.toString(),
     price: params.price.toString(),
     expiry: params.expiry.toString(),
+    receivers: params.receivers,
     status: 'pending',
     createdAt: Date.now(),
     txDigest: result.digest,
@@ -144,7 +178,7 @@ export async function cancelOrder(
       tx.object(CONTRACTS.DARK_POOL_OBJECT),
       tx.pure(vecU8.serialize(Array.from(hexToBytes(commitment)))),
     ],
-    typeArguments: ['0x2::sui::SUI'],
+    typeArguments: ['0x2::sui::SUI', DBUSDC_TYPE],
   });
 
   onProgress?.("build-tx", "complete");

@@ -25,6 +25,7 @@ interface OrderConfirmationModalProps {
     price: string;
     total: string;
     expiry: string;
+    receivers?: { address: string; percentage: number }[];
   };
   onConfirm: (onProgress: ProgressCallback) => Promise<HiddenOrder | null>;
 }
@@ -49,10 +50,10 @@ export function OrderConfirmationModal({
   const [steps, setSteps] = useState<StepState[]>(INITIAL_STEPS);
 
   const isBuy = order.side === "BUY";
-  const fromAsset = isBuy ? "USDC" : "SUI";
-  const toAsset = isBuy ? "SUI" : "USDC";
-  const fromAmount = isBuy ? order.total.replace(" USD", "") : order.amount;
-  const toAmount = isBuy ? order.amount : order.total.replace(" USD", "");
+  const fromAsset = isBuy ? "DBUSDC" : "SUI";
+  const toAsset = isBuy ? "SUI" : "DBUSDC";
+  const fromAmount = isBuy ? order.total.replace(" DBUSDC", "") : order.amount;
+  const toAmount = isBuy ? order.amount : order.total.replace(" DBUSDC", "");
 
   const resetState = useCallback(() => {
     setPhase("confirm");
@@ -181,6 +182,25 @@ export function OrderConfirmationModal({
                   <p className="font-mono">{order.expiry}</p>
                 </div>
               </div>
+
+              {/* RECEIVERS */}
+              {order.receivers && order.receivers.length > 0 && (
+                <div className="border-t border-border pt-4 space-y-2">
+                  <p className="text-[10px] tracking-widest text-muted-foreground text-center">
+                    RECEIVER ROUTING
+                  </p>
+                  <div className="space-y-1">
+                    {order.receivers.map((r, i) => (
+                      <div key={i} className="flex justify-between text-xs font-mono">
+                        <span className="text-muted-foreground">
+                          {r.address.slice(0, 8)}...{r.address.slice(-4)}
+                        </span>
+                        <span>{r.percentage}%</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* STEP PREVIEW */}
               <div className="border-t border-border pt-4 space-y-3">

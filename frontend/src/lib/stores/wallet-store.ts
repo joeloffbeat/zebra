@@ -6,12 +6,12 @@ interface WalletState {
   isConnected: boolean;
   balance: {
     sui: string;
-    usdc: string;
+    dbusdc: string;
   };
 
   setAddress: (address: string | null) => void;
   setConnected: (connected: boolean) => void;
-  setBalance: (balance: { sui: string; usdc: string }) => void;
+  setBalance: (balance: { sui: string; dbusdc: string }) => void;
   disconnect: () => void;
 }
 
@@ -20,7 +20,7 @@ export const useWalletStore = create<WalletState>()(
     (set) => ({
       address: null,
       isConnected: false,
-      balance: { sui: '0', usdc: '0' },
+      balance: { sui: '0', dbusdc: '0' },
 
       setAddress: (address) => set({ address }),
       setConnected: (isConnected) => set({ isConnected }),
@@ -28,7 +28,7 @@ export const useWalletStore = create<WalletState>()(
       disconnect: () => set({
         address: null,
         isConnected: false,
-        balance: { sui: '0', usdc: '0' }
+        balance: { sui: '0', dbusdc: '0' }
       }),
     }),
     {

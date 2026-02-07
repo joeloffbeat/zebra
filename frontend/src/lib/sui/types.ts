@@ -8,6 +8,7 @@ export interface HiddenOrder {
   amount: string;
   price: string;
   expiry: string;
+  receivers?: { address: string; percentage: number }[];
   status: 'pending' | 'matched' | 'settled' | 'cancelled' | 'expired';
   createdAt: number;
   txDigest: string;
@@ -18,6 +19,7 @@ export interface SubmitOrderParams {
   amount: bigint;
   price: bigint;
   expiry: bigint;
+  receivers?: { address: string; percentage: number }[];
 }
 
 export interface ProofResult {
