@@ -4,8 +4,7 @@ import { CONTRACTS } from './client';
 import { SubmitOrderParams, HiddenOrder } from './types';
 import { generateOrderProof, proofToSuiFormat, publicSignalsToSuiFormat, hexToBytes } from '../zk/prover';
 import { encryptOrderData } from '../seal/client';
-
-const SEAL_ALLOWLIST_ID = process.env.NEXT_PUBLIC_SEAL_ALLOWLIST_ID || '';
+import { SEAL_ALLOWLIST_ID } from '../constants';
 
 export async function submitHiddenOrder(
   params: SubmitOrderParams,

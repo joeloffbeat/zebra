@@ -248,7 +248,12 @@ async function main() {
     await buildContracts();
 
     // 3. Publish package
-    const { packageId } = await publishPackage(keypair);
+    const { packageId, digest: publishDigest } = await publishPackage(keypair);
+
+    // Wait for publish transaction to finalize before creating pool
+    console.log('\nWaiting for publish transaction to finalize...');
+    await client.waitForTransaction({ digest: publishDigest });
+    console.log('Publish transaction finalized.');
 
     // 4. Load verification key from circuit build
     const vkeyPath = path.join(__dirname, '../circuits/build/sui_vkey.json');

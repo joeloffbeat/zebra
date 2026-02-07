@@ -1,8 +1,6 @@
 import { SealClient } from '@mysten/seal';
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
-
-// Seal package for allowlist-based access control
-const SEAL_PACKAGE_ID = process.env.NEXT_PUBLIC_SEAL_PACKAGE_ID || '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
+import { SEAL_PACKAGE_ID } from '../constants';
 
 // Testnet key server object IDs (real, verified working)
 const TESTNET_KEY_SERVERS = [
