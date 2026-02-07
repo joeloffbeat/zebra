@@ -85,10 +85,19 @@ export async function submitHiddenOrder(
   });
 
   console.log('[ZEBRA] Requesting signature...');
-  const result = await signer.signAndExecuteTransaction({
-    transaction: tx,
-  });
-  console.log('[ZEBRA] Transaction submitted:', result.digest);
+  console.log('[ZEBRA] Transaction target:', `${CONTRACTS.DARK_POOL_PACKAGE}::dark_pool::submit_order`);
+  console.log('[ZEBRA] Pool object:', CONTRACTS.DARK_POOL_OBJECT);
+
+  let result;
+  try {
+    result = await signer.signAndExecuteTransaction({
+      transaction: tx,
+    });
+    console.log('[ZEBRA] Transaction submitted:', result.digest);
+  } catch (signError) {
+    console.error('[ZEBRA] Sign/execute failed:', signError);
+    throw signError;
+  }
 
   return {
     id: crypto.randomUUID(),

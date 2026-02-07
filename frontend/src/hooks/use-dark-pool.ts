@@ -7,7 +7,9 @@ import { submitHiddenOrder, cancelOrder } from '@/lib/sui/dark-pool';
 import { SubmitOrderParams, HiddenOrder } from '@/lib/sui/types';
 
 export function useDarkPool() {
-  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction();
+  const { mutateAsync: signAndExecute } = useSignAndExecuteTransaction({
+    execute: { showEffects: true, showEvents: true },
+  });
   const { addOrder, updateOrderStatus, orders } = useOrderStore();
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
