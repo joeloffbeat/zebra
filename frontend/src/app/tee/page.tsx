@@ -80,10 +80,10 @@ export default function TeePage() {
         {isError && (
           <div className="border border-red-500/20 p-6 text-center">
             <p className="text-xs tracking-widest text-red-500">
-              BACKEND UNREACHABLE
+              TEE UNREACHABLE
             </p>
             <p className="text-[10px] tracking-wide text-muted-foreground mt-2">
-              ENSURE THE BACKEND IS RUNNING ON PORT 3001
+              ENSURE THE TEE IS RUNNING
             </p>
           </div>
         )}
