@@ -4,6 +4,7 @@ import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
 import { config } from './config.js';
+import { logService } from './log-service.js';
 
 export interface FlashLoanResult {
   success: boolean;
@@ -32,6 +33,7 @@ export class FlashLoanService {
         this.keypair = Ed25519Keypair.fromSecretKey(secretKey);
       } catch (error) {
         console.error('FlashLoanService: Failed to initialize keypair:', error);
+        logService.addLog('error', 'flash-loan', `FlashLoanService: Failed to initialize keypair: ${error}`);
       }
     }
 
@@ -42,6 +44,7 @@ export class FlashLoanService {
     });
 
     console.log('FlashLoanService initialized');
+    logService.addLog('info', 'flash-loan', 'FlashLoanService initialized');
   }
 
   async executeFlashLoanDemo(params: {
@@ -93,6 +96,7 @@ export class FlashLoanService {
       }
 
       console.log(`Flash loan demo succeeded: borrowed ${borrowAmount} from ${poolKey}, tx: ${result.digest}`);
+      logService.addLog('info', 'flash-loan', `Flash loan demo succeeded: borrowed ${borrowAmount} from ${poolKey}, tx: ${result.digest}`);
       return {
         success: true,
         txDigest: result.digest,
@@ -101,6 +105,7 @@ export class FlashLoanService {
       };
     } catch (error: any) {
       console.error('Flash loan failed:', error);
+      logService.addLog('error', 'flash-loan', `Flash loan failed: ${error}`);
       return {
         success: false,
         borrowAmount,
