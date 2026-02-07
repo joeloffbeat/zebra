@@ -4,7 +4,7 @@ import { useCurrentAccount, useCurrentWallet, useDisconnectWallet, useConnectWal
 import { useSuiClient } from '@mysten/dapp-kit';
 import { useCallback, useEffect } from 'react';
 import { useWalletStore } from '@/lib/stores/wallet-store';
-import { DBUSDC_TYPE } from '@/lib/constants';
+import { USDC_TYPE } from '@/lib/constants';
 
 export function useWallet() {
   const currentAccount = useCurrentAccount();
@@ -21,14 +21,14 @@ export function useWallet() {
       setAddress(currentAccount.address);
       setConnected(true);
 
-      // Fetch SUI and DBUSDC balances
+      // Fetch SUI and USDC balances
       Promise.all([
         client.getBalance({ owner: currentAccount.address }),
-        client.getBalance({ owner: currentAccount.address, coinType: DBUSDC_TYPE }),
-      ]).then(([suiBalance, dbUsdcBalance]) => {
+        client.getBalance({ owner: currentAccount.address, coinType: USDC_TYPE }),
+      ]).then(([suiBalance, usdcBalance]) => {
         setBalance({
           sui: (Number(suiBalance.totalBalance) / 1e9).toFixed(4),
-          dbusdc: (Number(dbUsdcBalance.totalBalance) / 1e6).toFixed(2),
+          usdc: (Number(usdcBalance.totalBalance) / 1e6).toFixed(2),
         });
       });
     } else {

@@ -2,21 +2,21 @@ import { SealClient } from '@mysten/seal';
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { SEAL_PACKAGE_ID } from '../constants';
 
-// Testnet key server object IDs (real, verified working)
-const TESTNET_KEY_SERVERS = [
-  '0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75',
-  '0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8',
+// Mainnet key server object IDs (update with real mainnet key server IDs)
+const MAINNET_KEY_SERVERS = [
+  'TODO_MAINNET_KEY_SERVER_1',
+  'TODO_MAINNET_KEY_SERVER_2',
 ];
 
 let sealClient: SealClient | null = null;
 
 function getSealClient(): SealClient {
   if (!sealClient) {
-    const suiClient = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl('testnet'), network: 'testnet' });
+    const suiClient = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl('mainnet'), network: 'mainnet' });
 
     sealClient = new SealClient({
       suiClient,
-      serverConfigs: TESTNET_KEY_SERVERS.map((id) => ({
+      serverConfigs: MAINNET_KEY_SERVERS.map((id) => ({
         objectId: id,
         weight: 1,
       })),

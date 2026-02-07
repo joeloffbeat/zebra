@@ -10,7 +10,7 @@ import { logService } from './log-service.js';
 // DeepBook constants for mid-price calculation
 const FLOAT_SCALAR = 1_000_000_000;
 const SUI_SCALAR = 1_000_000_000;   // 9 decimals
-const DBUSDC_SCALAR = 1_000_000;     // 6 decimals
+const USDC_SCALAR = 1_000_000;       // 6 decimals
 
 export class DeepBookService {
   private dbClient: DeepBookClient;
@@ -19,7 +19,7 @@ export class DeepBookService {
   private initialized = false;
 
   constructor() {
-    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
+    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'mainnet' });
 
     this.address = '0x0000000000000000000000000000000000000000000000000000000000000000';
     if (config.suiPrivateKey) {
@@ -41,16 +41,16 @@ export class DeepBookService {
 
     this.dbClient = new DeepBookClient({
       address: this.address,
-      network: 'testnet',
+      network: 'mainnet',
       client: this.suiClient,
     });
 
     this.initialized = true;
-    console.log('DeepBookService initialized (testnet)');
-    logService.addLog('info', 'deepbook', 'DeepBookService initialized (testnet)');
+    console.log('DeepBookService initialized (mainnet)');
+    logService.addLog('info', 'deepbook', 'DeepBookService initialized (mainnet)');
   }
 
-  async getMidPrice(poolKey: string = 'SUI_DBUSDC'): Promise<number | null> {
+  async getMidPrice(poolKey: string = 'SUI_USDC'): Promise<number | null> {
     try {
       // Build the same transaction the DeepBook SDK would build,
       // but use devInspectTransactionBlock instead of simulateTransaction.
@@ -72,7 +72,7 @@ export class DeepBookService {
 
       const [bytes] = result.results[0].returnValues[0];
       const rawValue = bcs.U64.parse(new Uint8Array(bytes));
-      const adjustedMidPrice = Number(rawValue) * SUI_SCALAR / DBUSDC_SCALAR / FLOAT_SCALAR;
+      const adjustedMidPrice = Number(rawValue) * SUI_SCALAR / USDC_SCALAR / FLOAT_SCALAR;
       const midPrice = Number(adjustedMidPrice.toFixed(9));
 
       if (midPrice === 0) {
@@ -91,7 +91,7 @@ export class DeepBookService {
     }
   }
 
-  async getOrderBook(poolKey: string = 'SUI_DBUSDC', priceLow: number = 0.01, priceHigh: number = 1000): Promise<{
+  async getOrderBook(poolKey: string = 'SUI_USDC', priceLow: number = 0.01, priceHigh: number = 1000): Promise<{
     bids: { prices: number[]; quantities: number[] };
     asks: { prices: number[]; quantities: number[] };
   } | null> {
@@ -108,7 +108,7 @@ export class DeepBookService {
     }
   }
 
-  async getVaultBalances(poolKey: string = 'SUI_DBUSDC'): Promise<{
+  async getVaultBalances(poolKey: string = 'SUI_USDC'): Promise<{
     base: number;
     quote: number;
     deep: number;

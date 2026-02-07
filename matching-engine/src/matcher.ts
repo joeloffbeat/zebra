@@ -30,7 +30,7 @@ export class OrderMatcher {
     if (bids.length === 0 || asks.length === 0) return [];
 
     // Get DeepBook reference price for logging
-    const refPrice = await this.deepBook.getMidPrice('SUI_DBUSDC');
+    const refPrice = await this.deepBook.getMidPrice('SUI_USDC');
 
     // Price-time priority matching
     let bidIdx = 0;

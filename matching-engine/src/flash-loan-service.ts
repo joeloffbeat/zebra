@@ -25,7 +25,7 @@ export class FlashLoanService {
   private keypair: Ed25519Keypair | null = null;
 
   constructor() {
-    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
+    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'mainnet' });
 
     if (config.suiPrivateKey) {
       try {
@@ -39,7 +39,7 @@ export class FlashLoanService {
 
     this.dbClient = new DeepBookClient({
       address: this.keypair?.toSuiAddress() ?? '0x0000000000000000000000000000000000000000000000000000000000000000',
-      network: 'testnet',
+      network: 'mainnet',
       client: this.suiClient,
     });
 
@@ -116,7 +116,7 @@ export class FlashLoanService {
   }
 
   async getAvailablePools(): Promise<PoolInfo[]> {
-    const poolKeys = ['SUI_DBUSDC'];
+    const poolKeys = ['SUI_USDC'];
     const results: PoolInfo[] = [];
 
     for (const poolKey of poolKeys) {

@@ -4,7 +4,7 @@ import { CONTRACTS, suiClient } from './client';
 import { SubmitOrderParams, HiddenOrder } from './types';
 import { generateOrderProof, proofToSuiFormat, publicSignalsToSuiFormat, hexToBytes } from '../zk/prover';
 import { encryptOrderData } from '../seal/client';
-import { SEAL_ALLOWLIST_ID, DBUSDC_TYPE } from '../constants';
+import { SEAL_ALLOWLIST_ID, USDC_TYPE } from '../constants';
 import type { ProgressCallback } from './progress-types';
 
 export async function submitHiddenOrder(
@@ -99,29 +99,29 @@ export async function submitHiddenOrder(
           tx.pure(vecU8.serialize(Array.from(nullifierBytes))),
           tx.pure(vecU8.serialize(Array.from(encryptedData))),
         ],
-        typeArguments: ['0x2::sui::SUI', DBUSDC_TYPE],
+        typeArguments: ['0x2::sui::SUI', USDC_TYPE],
       });
     } else {
-      // BUY: lock DBUSDC (QuoteCoin)
+      // BUY: lock USDC (QuoteCoin)
       if (!walletAddress) {
         throw new Error('Wallet address required for BUY orders');
       }
 
-      console.log('[ZEBRA] Fetching DBUSDC coins for:', walletAddress);
-      const dbUsdcCoins = await suiClient.getCoins({
+      console.log('[ZEBRA] Fetching USDC coins for:', walletAddress);
+      const usdcCoins = await suiClient.getCoins({
         owner: walletAddress,
-        coinType: DBUSDC_TYPE,
+        coinType: USDC_TYPE,
       });
-      console.log('[ZEBRA] Found DBUSDC coins:', dbUsdcCoins.data.length);
+      console.log('[ZEBRA] Found USDC coins:', usdcCoins.data.length);
 
-      if (dbUsdcCoins.data.length === 0) {
-        throw new Error('No DBUSDC tokens found in wallet. Get DBUSDC from DeepBook testnet faucet.');
+      if (usdcCoins.data.length === 0) {
+        throw new Error('No USDC tokens found in wallet. Bridge USDC from another chain via the Deposit page.');
       }
 
-      const primaryCoin = tx.object(dbUsdcCoins.data[0].coinObjectId);
+      const primaryCoin = tx.object(usdcCoins.data[0].coinObjectId);
 
-      if (dbUsdcCoins.data.length > 1) {
-        const otherCoins = dbUsdcCoins.data.slice(1).map(c => tx.object(c.coinObjectId));
+      if (usdcCoins.data.length > 1) {
+        const otherCoins = usdcCoins.data.slice(1).map(c => tx.object(c.coinObjectId));
         tx.mergeCoins(primaryCoin, otherCoins);
       }
 
@@ -138,7 +138,7 @@ export async function submitHiddenOrder(
           tx.pure(vecU8.serialize(Array.from(nullifierBytes))),
           tx.pure(vecU8.serialize(Array.from(encryptedData))),
         ],
-        typeArguments: ['0x2::sui::SUI', DBUSDC_TYPE],
+        typeArguments: ['0x2::sui::SUI', USDC_TYPE],
       });
     }
   } catch (buildError) {
@@ -205,7 +205,7 @@ export async function cancelOrder(
       tx.object(CONTRACTS.DARK_POOL_OBJECT),
       tx.pure(vecU8.serialize(Array.from(hexToBytes(commitment)))),
     ],
-    typeArguments: ['0x2::sui::SUI', DBUSDC_TYPE],
+    typeArguments: ['0x2::sui::SUI', USDC_TYPE],
   });
 
   onProgress?.("build-tx", "complete");

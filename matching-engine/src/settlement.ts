@@ -15,7 +15,7 @@ export class SettlementService {
   private teeService: TeeAttestationService | null = null;
 
   constructor() {
-    this.client = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
+    this.client = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'mainnet' });
 
     if (config.suiPrivateKey) {
       try {
@@ -59,7 +59,7 @@ export class SettlementService {
 
       // Buyer receives BaseCoin (seller's locked SUI)
       const payoutBuyer = sellerLocked;
-      // Seller receives QuoteCoin (buyer's locked DBUSDC)
+      // Seller receives QuoteCoin (buyer's locked USDC)
       const payoutSeller = buyerLocked;
 
       // Resolve receivers (fallback to owner if empty)
@@ -82,7 +82,7 @@ export class SettlementService {
         ],
         typeArguments: [
           '0x2::sui::SUI',
-          config.dbUsdcType,
+          config.usdcType,
         ],
       });
 

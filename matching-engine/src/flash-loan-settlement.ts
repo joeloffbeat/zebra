@@ -12,8 +12,8 @@ import { DeepBookService } from './deepbook-service.js';
 
 // Maximum acceptable slippage for DeepBook swaps (10%)
 const MAX_SLIPPAGE = 0.10;
-// DBUSDC has 6 decimals
-const DBUSDC_DECIMALS = 1_000_000;
+// USDC has 6 decimals
+const USDC_DECIMALS = 1_000_000;
 // DEEP tokens required to pay DeepBook taker fees.
 // Overestimate is safe — unused DEEP is refunded in the deepCoinResult.
 // Typical taker fee is ~0.1% of trade value paid in DEEP.
@@ -36,7 +36,7 @@ export class FlashLoanSettlementService {
 
   constructor(deepBookService: DeepBookService) {
     this.deepBookService = deepBookService;
-    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
+    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'mainnet' });
 
     if (config.suiPrivateKey) {
       try {
@@ -50,7 +50,7 @@ export class FlashLoanSettlementService {
 
     this.dbClient = new DeepBookClient({
       address: this.keypair?.toSuiAddress() ?? '0x0000000000000000000000000000000000000000000000000000000000000000',
-      network: 'testnet',
+      network: 'mainnet',
       client: this.suiClient,
     });
 
@@ -79,7 +79,7 @@ export class FlashLoanSettlementService {
     }
 
     // Fetch mid-price for minOut calculation (uses devInspect — reliable)
-    const midPrice = await this.deepBookService.getMidPrice('SUI_DBUSDC');
+    const midPrice = await this.deepBookService.getMidPrice('SUI_USDC');
     if (!midPrice || midPrice <= 0) {
       console.warn('FlashLoanSettlement: No mid-price available (pool has no liquidity), skipping settlement to protect sellers');
       logService.addLog('warn', 'flash-loan', 'FlashLoanSettlement: No mid-price available, skipping settlement to protect sellers');
@@ -94,7 +94,7 @@ export class FlashLoanSettlementService {
 
     // Optional: check bid-side depth if order book query succeeds
     // (getLevel2Range uses simulateTransaction which has a BCS bug — may fail)
-    const orderBook = await this.deepBookService.getOrderBook('SUI_DBUSDC');
+    const orderBook = await this.deepBookService.getOrderBook('SUI_USDC');
     if (orderBook) {
       const hasBids = orderBook.bids.prices.length > 0 &&
         orderBook.bids.quantities.some(q => q > 0);
@@ -138,7 +138,7 @@ export class FlashLoanSettlementService {
     const testSui = Number(sells[0].decryptedLockedAmount) / 1e9;
     const swapWorks = await this.dryRunSwap(testSui, midPrice);
     if (!swapWorks) {
-      console.warn('FlashLoanSettlement: Dry-run swap produced 0 DBUSDC — pool has no bid-side liquidity despite mid-price');
+      console.warn('FlashLoanSettlement: Dry-run swap produced 0 USDC — pool has no bid-side liquidity despite mid-price');
       logService.addLog('warn', 'flash-loan', 'FlashLoanSettlement: Dry-run confirmed no bid-side liquidity — orders will retry next batch');
       return sells.map(s => ({
         success: false,
@@ -185,27 +185,27 @@ export class FlashLoanSettlementService {
 
       // 1. Borrow base asset (SUI) from DeepBook
       const [borrowedSui, flashLoan] = this.dbClient.flashLoans.borrowBaseAsset(
-        'SUI_DBUSDC',
+        'SUI_USDC',
         amountInSui,
       )(tx as any);
 
       // 2. Swap SUI -> USDC on DeepBook (with slippage protection)
-      const expectedDbusdc = amountInSui * midPrice;
-      const minDbusdc = expectedDbusdc * (1 - MAX_SLIPPAGE);
-      console.log(`FlashLoanSettlement: Swap ${amountInSui} SUI → min ${minDbusdc.toFixed(6)} DBUSDC (expected ${expectedDbusdc.toFixed(6)})`);
-      logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Swap ${amountInSui} SUI → min ${minDbusdc.toFixed(6)} DBUSDC`);
+      const expectedUsdc = amountInSui * midPrice;
+      const minUsdc = expectedUsdc * (1 - MAX_SLIPPAGE);
+      console.log(`FlashLoanSettlement: Swap ${amountInSui} SUI → min ${minUsdc.toFixed(6)} USDC (expected ${expectedUsdc.toFixed(6)})`);
+      logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Swap ${amountInSui} SUI → min ${minUsdc.toFixed(6)} USDC`);
 
       const [remBase, usdcCoin, deepRefund] = this.dbClient.deepBook.swapExactBaseForQuote({
-        poolKey: 'SUI_DBUSDC',
+        poolKey: 'SUI_USDC',
         amount: amountInSui,
         baseCoin: borrowedSui,
         deepAmount: DEEP_FEE_PER_SWAP,
-        minOut: minDbusdc,
+        minOut: minUsdc,
       })(tx as any);
 
       // 2b. Enforce minimum output (DeepBook testnet doesn't enforce minQuoteOut).
-      //     Split minOut from the DBUSDC coin — aborts if coin value < minOut.
-      const minOutOnChain = Math.max(1, Math.round(minDbusdc * DBUSDC_DECIMALS));
+      //     Split minOut from the USDC coin — aborts if coin value < minOut.
+      const minOutOnChain = Math.max(1, Math.round(minUsdc * USDC_DECIMALS));
       const [assertCoin] = tx.splitCoins(usdcCoin, [tx.pure.u64(minOutOnChain)]);
       tx.mergeCoins(usdcCoin, [assertCoin]);
 
@@ -217,13 +217,13 @@ export class FlashLoanSettlementService {
           tx.object(config.matcherCapId),
           tx.pure(bcs.vector(bcs.u8()).serialize(commitmentBytes)),
         ],
-        typeArguments: ['0x2::sui::SUI', config.dbUsdcType],
+        typeArguments: ['0x2::sui::SUI', config.usdcType],
       });
 
       // 4. Return flash loan using extracted SUI from vault
       // returnBaseAsset returns a remainder Coin (no drop ability) — must be consumed
       const remainderCoin = this.dbClient.flashLoans.returnBaseAsset(
-        'SUI_DBUSDC',
+        'SUI_USDC',
         amountInSui,
         extractedSui,
         flashLoan,
@@ -241,7 +241,7 @@ export class FlashLoanSettlementService {
             tx.pure.vector('address', receivers.map(r => r.address)),
             tx.pure.vector('u64', receivers.map(r => r.percentage)),
           ],
-          typeArguments: [config.dbUsdcType],
+          typeArguments: [config.usdcType],
         });
       }
 
@@ -285,24 +285,24 @@ export class FlashLoanSettlementService {
 
     // 1. Borrow SUI
     const [borrowedSui, flashLoan] = this.dbClient.flashLoans.borrowBaseAsset(
-      'SUI_DBUSDC',
+      'SUI_USDC',
       amountInSui,
     )(tx as any);
 
     // 2. Swap SUI -> USDC (with slippage protection)
-    const expectedDbusdc = amountInSui * midPrice;
-    const minDbusdc = expectedDbusdc * (1 - MAX_SLIPPAGE);
+    const expectedUsdc = amountInSui * midPrice;
+    const minUsdc = expectedUsdc * (1 - MAX_SLIPPAGE);
 
     const [remBase, usdcCoin, deepRefund] = this.dbClient.deepBook.swapExactBaseForQuote({
-      poolKey: 'SUI_DBUSDC',
+      poolKey: 'SUI_USDC',
       amount: amountInSui,
       baseCoin: borrowedSui,
       deepAmount: DEEP_FEE_PER_SWAP,
-      minOut: minDbusdc,
+      minOut: minUsdc,
     })(tx as any);
 
     // 2b. Enforce minimum output (DeepBook testnet doesn't enforce minQuoteOut)
-    const minOutOnChain = Math.max(1, Math.round(minDbusdc * DBUSDC_DECIMALS));
+    const minOutOnChain = Math.max(1, Math.round(minUsdc * USDC_DECIMALS));
     const [assertCoin] = tx.splitCoins(usdcCoin, [tx.pure.u64(minOutOnChain)]);
     tx.mergeCoins(usdcCoin, [assertCoin]);
 
@@ -314,13 +314,13 @@ export class FlashLoanSettlementService {
         tx.object(config.matcherCapId),
         tx.pure(bcs.vector(bcs.u8()).serialize(commitmentBytes)),
       ],
-      typeArguments: ['0x2::sui::SUI', config.dbUsdcType],
+      typeArguments: ['0x2::sui::SUI', config.usdcType],
     });
 
     // 4. Repay flash loan
     // returnBaseAsset returns a remainder Coin (no drop ability) — must be consumed
     const remainderCoin = this.dbClient.flashLoans.returnBaseAsset(
-      'SUI_DBUSDC',
+      'SUI_USDC',
       amountInSui,
       extractedSui,
       flashLoan,
@@ -338,7 +338,7 @@ export class FlashLoanSettlementService {
           tx.pure.vector('address', receivers.map(r => r.address)),
           tx.pure.vector('u64', receivers.map(r => r.percentage)),
         ],
-        typeArguments: [config.dbUsdcType],
+        typeArguments: [config.usdcType],
       });
     }
 
@@ -384,7 +384,7 @@ export class FlashLoanSettlementService {
 
       // Build a simple swap (no flash loan, just swap)
       const [remBase, usdcCoin, deepRefund] = this.dbClient.deepBook.swapExactBaseForQuote({
-        poolKey: 'SUI_DBUSDC',
+        poolKey: 'SUI_USDC',
         amount: amountInSui,
         deepAmount: DEEP_FEE_PER_SWAP,
         minOut: 0, // Don't enforce minimum in dry-run — we want to see what we get
@@ -403,22 +403,22 @@ export class FlashLoanSettlementService {
         return false;
       }
 
-      // Check balance changes for DBUSDC output
+      // Check balance changes for USDC output
       const balanceChanges = (result as any).balanceChanges;
       if (balanceChanges) {
-        const dbusdcChange = balanceChanges.find((c: any) =>
-          c.coinType?.includes('DBUSDC') && Number(c.amount) > 0
+        const usdcChange = balanceChanges.find((c: any) =>
+          c.coinType?.includes('usdc::USDC') && Number(c.amount) > 0
         );
-        if (dbusdcChange) {
-          const dbusdcAmount = Number(dbusdcChange.amount) / DBUSDC_DECIMALS;
-          console.log(`FlashLoanSettlement: Dry-run swap would produce ${dbusdcAmount.toFixed(6)} DBUSDC`);
-          logService.addLog('info', 'flash-loan', `Dry-run swap would produce ${dbusdcAmount.toFixed(6)} DBUSDC`);
-          return dbusdcAmount > 0;
+        if (usdcChange) {
+          const usdcAmount = Number(usdcChange.amount) / USDC_DECIMALS;
+          console.log(`FlashLoanSettlement: Dry-run swap would produce ${usdcAmount.toFixed(6)} USDC`);
+          logService.addLog('info', 'flash-loan', `Dry-run swap would produce ${usdcAmount.toFixed(6)} USDC`);
+          return usdcAmount > 0;
         }
       }
 
-      console.log('FlashLoanSettlement: Dry-run swap produced 0 DBUSDC (no bid liquidity)');
-      logService.addLog('warn', 'flash-loan', 'Dry-run swap produced 0 DBUSDC');
+      console.log('FlashLoanSettlement: Dry-run swap produced 0 USDC (no bid liquidity)');
+      logService.addLog('warn', 'flash-loan', 'Dry-run swap produced 0 USDC');
       return false;
     } catch (error) {
       console.warn('FlashLoanSettlement: Dry-run swap error:', error);

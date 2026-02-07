@@ -31,7 +31,7 @@ export class SuiEventListener extends EventEmitter {
 
   constructor() {
     super();
-    this.client = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
+    this.client = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'mainnet' });
   }
 
   async start() {

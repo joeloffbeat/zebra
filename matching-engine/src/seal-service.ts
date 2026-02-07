@@ -6,10 +6,10 @@ import { Transaction } from '@mysten/sui/transactions';
 import { config } from './config.js';
 import { logService } from './log-service.js';
 
-// Testnet key server object IDs (verified working in playground)
-const TESTNET_KEY_SERVERS = [
-  '0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75',
-  '0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8',
+// Mainnet key server object IDs (update with real mainnet key server IDs)
+const MAINNET_KEY_SERVERS = [
+  'TODO_MAINNET_KEY_SERVER_1',
+  'TODO_MAINNET_KEY_SERVER_2',
 ];
 
 export interface DecryptedOrderData {
@@ -29,11 +29,11 @@ export class SealService {
   private sessionKey: SessionKey | null = null;
 
   constructor() {
-    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
+    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'mainnet' });
 
     this.sealClient = new SealClient({
       suiClient: this.suiClient,
-      serverConfigs: TESTNET_KEY_SERVERS.map((id: string) => ({
+      serverConfigs: MAINNET_KEY_SERVERS.map((id: string) => ({
         objectId: id,
         weight: 1,
       })),

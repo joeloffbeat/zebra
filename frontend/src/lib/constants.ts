@@ -1,7 +1,20 @@
-// Deployed contract addresses (Sui testnet)
-export const DARK_POOL_PACKAGE = '0xca85bfc10d129d5e4f7bcabeecd6a332568e75b23fa9a929c0b83fc8c7aee2b2';
-export const DARK_POOL_OBJECT = '0x3f47d9eaa0e6a1a159bbdd1fdc8a8bcc46252c51ed7e0494d1e10341c2ba9e58';
-export const SEAL_PACKAGE_ID = '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
-export const SEAL_ALLOWLIST_ID = '0xba6fda6cbedd1938debcec8883b07f1c7d2d1b9d744fe57c98c48e75cf05acf8';
-export const DBUSDC_TYPE = '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC';
-export const BACKEND_URL = 'http://localhost:3006';
+// Deployed contract addresses (Sui mainnet — update after redeployment)
+export const DARK_POOL_PACKAGE = 'TODO_MAINNET_DARK_POOL_PACKAGE';
+export const DARK_POOL_OBJECT = 'TODO_MAINNET_DARK_POOL_OBJECT';
+export const SEAL_PACKAGE_ID = '0xcb83a248bda5f7a0a431e6bf9e96d184e604130ec5218696e3f1211113b447b7';
+export const SEAL_ALLOWLIST_ID = 'TODO_MAINNET_SEAL_ALLOWLIST_ID';
+export const USDC_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
+export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3006';
+
+// LiFi cross-chain bridging constants
+export const LIFI_CHAIN_IDS = {
+  ARBITRUM: 42161,
+  SUI: 9270000000000000,
+  ETHEREUM: 1,
+  BASE: 8453,
+  OPTIMISM: 10,
+  POLYGON: 137,
+} as const;
+
+export const ARB_USDC_ADDRESS = '0xaf88d065e77c8cC2239327C5EDb3A432268e5831';
+export const SUI_USDC_ADDRESS = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';

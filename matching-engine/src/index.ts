@@ -146,14 +146,14 @@ app.get('/batch/status', (req, res) => {
 });
 
 app.get('/deepbook/midprice', async (req, res) => {
-  const pool = (req.query.pool as string) || 'SUI_DBUSDC';
+  const pool = (req.query.pool as string) || 'SUI_USDC';
   const midPrice = await deepBookService.getMidPrice(pool);
   res.json({ pool, midPrice });
 });
 
 // ── Flash loan endpoints ─────────────────────────────────────────────
 app.post('/flash-loan/demo', async (req, res) => {
-  const { poolKey = 'SUI_DBUSDC', borrowAmount = 0.001 } = req.body || {};
+  const { poolKey = 'SUI_USDC', borrowAmount = 0.001 } = req.body || {};
   const result = await flashLoanService.executeFlashLoanDemo({ poolKey, borrowAmount });
   if (result.success) {
     teeService.incrementFlashLoans();
