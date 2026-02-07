@@ -19,8 +19,8 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const NETWORK = 'testnet';
-const POOL_KEY = 'SUI_DBUSDC';
+const NETWORK = 'mainnet';
+const POOL_KEY = 'SUI_USDC';
 const BORROW_AMOUNT = 0.001; // SUI
 
 async function main() {

@@ -17,7 +17,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const NETWORK = 'testnet';
+const NETWORK = 'mainnet';
 const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK) });
 
 const PACKAGE_ID = process.env.DARK_POOL_PACKAGE || '0x9e4fc5a3129441e3a964bdbf2776ec332a375a46d1a0bac624731abbf7874ebf';
@@ -49,7 +49,7 @@ async function createPool(
     target: `${packageId}::dark_pool::create_pool`,
     typeArguments: [
       '0x2::sui::SUI', // BaseAsset
-      '0x2::sui::SUI', // QuoteAsset (using SUI for testnet, would be USDC in prod)
+      '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC', // QuoteAsset (USDC)
     ],
     arguments: [
       tx.pure(bcs.vector(bcs.u8()).serialize(vkBytes)),           // vk_bytes

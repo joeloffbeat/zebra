@@ -230,7 +230,7 @@ export default function OrdersPage() {
                                     order.txDigest;
                                   return digest ? (
                                     <a
-                                      href={`https://suiscan.xyz/testnet/tx/${digest}`}
+                                      href={`https://suiscan.xyz/mainnet/tx/${digest}`}
                                       target="_blank"
                                       rel="noopener noreferrer"
                                       className="text-xs tracking-widest hover:opacity-60"

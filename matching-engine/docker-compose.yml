@@ -8,7 +8,7 @@ services:
     environment:
       - TEE_MODE=enclave
       - ENCLAVE_KEY_PATH=/app/ecdsa.sec
-      - SUI_RPC_URL=https://fullnode.testnet.sui.io:443
+      - SUI_RPC_URL=https://fullnode.mainnet.sui.io:443
       - SUI_PRIVATE_KEY=${SUI_PRIVATE_KEY}
       - DARK_POOL_PACKAGE=${DARK_POOL_PACKAGE}
       - DARK_POOL_OBJECT=${DARK_POOL_OBJECT}

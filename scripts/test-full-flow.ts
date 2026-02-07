@@ -29,7 +29,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const NETWORK = 'testnet';
+const NETWORK = 'mainnet';
 const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK) });
 const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
 

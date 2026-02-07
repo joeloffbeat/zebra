@@ -147,14 +147,14 @@ export default function TradePage() {
         return;
       }
     } else {
-      const dbUsdcBal = parseFloat(balance.dbusdc || "0");
-      const requiredDbusdc = amountNum * priceNum;
-      if (dbUsdcBal <= 0) {
-        setSubmitError("NO DBUSDC IN WALLET — GET DBUSDC FROM DEEPBOOK TESTNET FAUCET");
+      const usdcBal = parseFloat(balance.usdc || "0");
+      const requiredUsdc = amountNum * priceNum;
+      if (usdcBal <= 0) {
+        setSubmitError("NO USDC IN WALLET");
         return;
       }
-      if (requiredDbusdc > dbUsdcBal) {
-        setSubmitError(`INSUFFICIENT DBUSDC BALANCE (NEED ${requiredDbusdc.toFixed(2)}, HAVE ${balance.dbusdc})`);
+      if (requiredUsdc > usdcBal) {
+        setSubmitError(`INSUFFICIENT USDC BALANCE (NEED ${requiredUsdc.toFixed(2)}, HAVE ${balance.usdc})`);
         return;
       }
     }
@@ -236,7 +236,7 @@ export default function TradePage() {
         {/* MARKET INFO BAR */}
         <div className="flex items-center gap-8 mb-8 pb-4 border-b border-border">
           <div className="flex items-center gap-4 text-xs tracking-wide">
-            <span className="opacity-100">SUI/DBUSDC</span>
+            <span className="opacity-100">SUI/USDC</span>
             <span className="font-mono text-muted-foreground">
               {midPriceValue ? `${midPriceValue}` : "\u2014"}
             </span>
@@ -291,15 +291,10 @@ export default function TradePage() {
             </div>
             <div>
               <span className="font-mono text-sm">
-                {isConnected ? `${balance.dbusdc} DBUSDC` : ""}
+                {isConnected ? `${balance.usdc} USDC` : ""}
               </span>
             </div>
           </div>
-          {isConnected && (
-            <span className="text-[10px] tracking-wide text-muted-foreground">
-              TESTNET
-            </span>
-          )}
         </div>
 
         {/* TRADING GRID */}
@@ -317,7 +312,7 @@ export default function TradePage() {
               <div className="space-y-2">
                 <Label>PAIR</Label>
                 <div className="text-xs tracking-widest border border-border p-3 text-muted-foreground">
-                  SUI / DBUSDC (TESTNET)
+                  SUI / USDC
                 </div>
               </div>
 
@@ -388,7 +383,7 @@ export default function TradePage() {
               {/* PRICE */}
               <div className="space-y-2">
                 <Label>
-                  {orderType === "MARKET" ? "MARKET PRICE (DBUSDC)" : "LIMIT PRICE (DBUSDC)"}
+                  {orderType === "MARKET" ? "MARKET PRICE (USDC)" : "LIMIT PRICE (USDC)"}
                 </Label>
                 <div className="flex items-center gap-2">
                   <Input
@@ -401,7 +396,7 @@ export default function TradePage() {
                     disabled={orderType === "MARKET"}
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
-                    DBUSDC
+                    USDC
                   </span>
                 </div>
                 {orderType === "MARKET" && (
@@ -504,7 +499,7 @@ export default function TradePage() {
                   <span className="tracking-widest text-muted-foreground">
                     ORDER VALUE
                   </span>
-                  <span className="font-mono">{orderValue} DBUSDC</span>
+                  <span className="font-mono">{orderValue} USDC</span>
                 </div>
               </div>
 
@@ -680,7 +675,7 @@ export default function TradePage() {
                           <TableCell>
                             {match.settlementDigest && (
                               <a
-                                href={`https://suiscan.xyz/testnet/tx/${match.settlementDigest}`}
+                                href={`https://suiscan.xyz/mainnet/tx/${match.settlementDigest}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-xs tracking-widest hover:opacity-60"
@@ -767,8 +762,8 @@ export default function TradePage() {
           side: side,
           amount: amount,
           token: "SUI",
-          price: `${price} DBUSDC`,
-          total: `${orderValue} DBUSDC`,
+          price: `${price} USDC`,
+          total: `${orderValue} USDC`,
           expiry: EXPIRY_LABELS[expiry],
           receivers: receivers.length > 0 ? receivers.map(r => ({
             address: r.address,

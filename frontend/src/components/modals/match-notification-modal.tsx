@@ -98,7 +98,7 @@ export function MatchNotificationModal({
                   {match.settlementDigest}
                 </p>
                 <a
-                  href={`https://suiscan.xyz/testnet/tx/${match.settlementDigest}`}
+                  href={`https://suiscan.xyz/mainnet/tx/${match.settlementDigest}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="shrink-0 p-1 hover:opacity-60 transition-opacity"

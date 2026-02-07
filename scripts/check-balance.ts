@@ -14,6 +14,6 @@ const kp = Ed25519Keypair.fromSecretKey(secretKey);
 const addr = kp.toSuiAddress();
 console.log('Address:', addr);
 
-const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl('testnet') });
+const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl('mainnet') });
 const balance = await client.getBalance({ owner: addr });
 console.log('Balance:', Number(balance.totalBalance) / 1e9, 'SUI');

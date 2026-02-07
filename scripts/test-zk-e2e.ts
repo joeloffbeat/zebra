@@ -20,7 +20,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const NETWORK = 'testnet';
+const NETWORK = 'mainnet';
 const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK) });
 
 const PACKAGE_ID = process.env.DARK_POOL_PACKAGE!;
@@ -189,7 +189,7 @@ async function main() {
 
   if (result.effects?.status?.status === 'success') {
     console.log('\n*** ZK PROOF VERIFIED ON-CHAIN! ***');
-    console.log('Groth16 proof passed sui::groth16::verify_groth16_proof on testnet.');
+    console.log('Groth16 proof passed sui::groth16::verify_groth16_proof on mainnet.');
     console.log('Compressed format is CORRECT.');
 
     if (result.events && result.events.length > 0) {

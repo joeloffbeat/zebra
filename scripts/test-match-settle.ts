@@ -26,7 +26,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const NETWORK = 'testnet';
+const NETWORK = 'mainnet';
 const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK) });
 
 const PACKAGE_ID = process.env.DARK_POOL_PACKAGE!;
@@ -384,7 +384,7 @@ async function main() {
   console.log('  2. SELL order (ZK proof):  SUCCESS - ' + sellResult.digest);
   console.log('  3. Settlement:             SUCCESS - ' + settleResult.digest);
   console.log('========================================');
-  console.log('All three transactions succeeded on Sui testnet.');
+  console.log('All three transactions succeeded on Sui mainnet.');
   console.log('The dark pool matching and settlement flow is working end-to-end.');
   console.log('========================================\n');
 }

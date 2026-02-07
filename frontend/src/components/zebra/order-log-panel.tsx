@@ -35,7 +35,7 @@ function TxRow({ label, digest }: { label: string; digest: string }) {
         {digest}
       </p>
       <a
-        href={`https://suiscan.xyz/testnet/tx/${digest}`}
+        href={`https://suiscan.xyz/mainnet/tx/${digest}`}
         target="_blank"
         rel="noopener noreferrer"
         className="shrink-0 p-1 hover:opacity-60 transition-opacity"

@@ -58,10 +58,10 @@ export function OrderConfirmationModal({
   const { batchStatus, matches } = useBackend();
 
   const isBuy = order.side === "BUY";
-  const fromAsset = isBuy ? "DBUSDC" : "SUI";
-  const toAsset = isBuy ? "SUI" : "DBUSDC";
-  const fromAmount = isBuy ? order.total.replace(" DBUSDC", "") : order.amount;
-  const toAmount = isBuy ? order.amount : order.total.replace(" DBUSDC", "");
+  const fromAsset = isBuy ? "USDC" : "SUI";
+  const toAsset = isBuy ? "SUI" : "USDC";
+  const fromAmount = isBuy ? order.total.replace(" USDC", "") : order.amount;
+  const toAmount = isBuy ? order.amount : order.total.replace(" USDC", "");
 
   const isExpanded = phase !== "confirm";
 
@@ -393,7 +393,7 @@ export function OrderConfirmationModal({
             <div className="flex items-center gap-4">
               {settlementDigest && (
                 <a
-                  href={`https://suiscan.xyz/testnet/tx/${settlementDigest}`}
+                  href={`https://suiscan.xyz/mainnet/tx/${settlementDigest}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="text-[10px] tracking-widest text-foreground hover:text-foreground/80"

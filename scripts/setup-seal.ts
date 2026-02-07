@@ -25,16 +25,16 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const NETWORK = 'testnet';
-const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), network: 'testnet' });
+const NETWORK = 'mainnet';
+const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), network: 'mainnet' });
 
-// Seal testnet package — already deployed, NO need to deploy our own
-const SEAL_PACKAGE_ID = '0x8afa5d31dbaa0a8fb07082692940ca3d56b5e856c5126cb5a3693f0a4de63b82';
+// Seal mainnet package
+const SEAL_PACKAGE_ID = '0xcb83a248bda5f7a0a431e6bf9e96d184e604130ec5218696e3f1211113b447b7';
 
-// Real testnet key servers (verified working in playground)
+// Mainnet key server object IDs (update with real mainnet key server IDs)
 const KEY_SERVER_IDS = [
-  '0x73d05d62c18d9374e3ea529e8e0ed6161da1a141a94d3f76ae3fe4e99356db75',
-  '0xf5d14a81a982144ae441cd7d64b09027f116a468bd36e7eca494f750591623c8',
+  'TODO_MAINNET_KEY_SERVER_1',
+  'TODO_MAINNET_KEY_SERVER_2',
 ];
 
 async function getKeypair(): Promise<Ed25519Keypair> {

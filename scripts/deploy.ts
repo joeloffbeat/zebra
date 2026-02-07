@@ -24,7 +24,7 @@ const __dirname = path.dirname(__filename);
 
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
-const NETWORK = 'testnet';
+const NETWORK = 'mainnet';
 const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK) });
 
 async function getKeypair(): Promise<Ed25519Keypair> {
@@ -51,7 +51,7 @@ async function buildContracts(): Promise<string> {
 }
 
 async function publishPackage(keypair: Ed25519Keypair): Promise<{ packageId: string; digest: string }> {
-  console.log('\nPublishing package to testnet...');
+  console.log('\nPublishing package to mainnet...');
   const address = keypair.toSuiAddress();
   console.log('Deployer address:', address);
 
@@ -60,8 +60,8 @@ async function publishPackage(keypair: Ed25519Keypair): Promise<{ packageId: str
   console.log('Balance:', Number(balance.totalBalance) / 1e9, 'SUI');
 
   if (Number(balance.totalBalance) < 100000000) {
-    console.log('\nInsufficient balance. Please fund the address with testnet SUI.');
-    console.log('Get testnet SUI from: https://faucet.sui.io/');
+    console.log('\nInsufficient balance. Please fund the address with SUI.');
+    console.log('Get SUI from an exchange or bridge.');
     throw new Error('Insufficient balance');
   }
 
@@ -129,13 +129,13 @@ async function createPool(
 
   const poolId = Array.from(new TextEncoder().encode('ZEBRA_POOL_1'));
 
-  // Dual type arguments: BaseCoin = SUI, QuoteCoin = DBUSDC
-  const DBUSDC_TYPE = '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC';
+  // Dual type arguments: BaseCoin = SUI, QuoteCoin = USDC
+  const USDC_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
   const [adminCap, matcherCap] = tx.moveCall({
     target: `${packageId}::dark_pool::create_pool`,
     typeArguments: [
       '0x2::sui::SUI',
-      DBUSDC_TYPE,
+      USDC_TYPE,
     ],
     arguments: [
       tx.pure(bcs.vector(bcs.u8()).serialize(vkBytes)),           // vk_bytes
