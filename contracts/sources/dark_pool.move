@@ -249,6 +249,33 @@ module zebra::dark_pool {
         });
     }
 
+    /// Settle a single order via flash loan netting.
+    /// Returns locked Coin to the caller's PTB for flash loan repayment.
+    public fun settle_single<CoinType>(
+        pool: &mut DarkPool<CoinType>,
+        _matcher_cap: &MatcherCap,
+        commitment: vector<u8>,
+        ctx: &mut TxContext
+    ): Coin<CoinType> {
+        assert!(table::contains(&pool.commitments, commitment), EOrderNotFound);
+        let order = table::remove(&mut pool.commitments, commitment);
+        assert!(balance::value(&pool.vault) >= order.locked_amount, EInsufficientVaultBalance);
+
+        let coin = coin::from_balance(
+            balance::split(&mut pool.vault, order.locked_amount),
+            ctx,
+        );
+
+        event::emit(OrderSettled {
+            pool_id: pool.config.pool_id,
+            commitment_a: commitment,
+            commitment_b: vector::empty<u8>(),
+            timestamp: tx_context::epoch(ctx),
+        });
+
+        coin
+    }
+
     // View functions
     public fun get_order_exists<CoinType>(
         pool: &DarkPool<CoinType>,
