@@ -17,7 +17,7 @@ const DBUSDC_DECIMALS = 1_000_000;
 // DEEP tokens required to pay DeepBook taker fees.
 // Overestimate is safe — unused DEEP is refunded in the deepCoinResult.
 // Typical taker fee is ~0.1% of trade value paid in DEEP.
-const DEEP_FEE_PER_SWAP = 2; // 2 DEEP per swap (generous overestimate)
+const DEEP_FEE_PER_SWAP = 0.5; // 0.5 DEEP per swap (unused portion is refunded)
 
 export interface FlashLoanSettlementResult {
   success: boolean;
