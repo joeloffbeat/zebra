@@ -134,6 +134,30 @@ export default function TradePage() {
       setSubmitError("ENTER A VALID PRICE");
       return;
     }
+
+    const amountNum = parseFloat(amount);
+    const priceNum = parseFloat(price);
+
+    // Balance checks
+    if (side === "SELL") {
+      const suiBal = parseFloat(balance.sui || "0");
+      if (amountNum > suiBal) {
+        setSubmitError(`INSUFFICIENT SUI BALANCE (${balance.sui} SUI)`);
+        return;
+      }
+    } else {
+      const dbUsdcBal = parseFloat(balance.dbusdc || "0");
+      const requiredDbusdc = amountNum * priceNum;
+      if (dbUsdcBal <= 0) {
+        setSubmitError("NO DBUSDC IN WALLET — GET DBUSDC FROM DEEPBOOK TESTNET FAUCET");
+        return;
+      }
+      if (requiredDbusdc > dbUsdcBal) {
+        setSubmitError(`INSUFFICIENT DBUSDC BALANCE (NEED ${requiredDbusdc.toFixed(2)}, HAVE ${balance.dbusdc})`);
+        return;
+      }
+    }
+
     // Validate receivers if specified
     if (receivers.length > 0) {
       const sum = receivers.reduce((s, r) => s + (parseInt(r.percentage) || 0), 0);
@@ -149,7 +173,7 @@ export default function TradePage() {
     }
 
     setShowConfirmModal(true);
-  }, [isConnected, amount, price, receivers]);
+  }, [isConnected, amount, price, receivers, side, balance]);
 
   const handleConfirmOrder = useCallback(async (onProgress: ProgressCallback) => {
     setSubmitError(null);
