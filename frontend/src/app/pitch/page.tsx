@@ -564,7 +564,7 @@ export default function PitchPage() {
                         <ESub text="WALLET" />
                       </div>
                       <div className="text-[13px] tracking-wide text-muted-foreground mt-2">
-                        <EDesc text="DAPP-KIT" />
+                        <EDesc text="PRIVY + DAPP-KIT" />
                       </div>
                     </div>
                   </div>
@@ -616,7 +616,7 @@ export default function PitchPage() {
                     <div className="grid grid-cols-2 gap-3">
                       {[
                         "FLASH LOANS",
-                        "SUI <> DBUSDC",
+                        "SUI <> USDC",
                         "MID-PRICE",
                         "HOT POTATO",
                       ].map((item) => (
@@ -945,7 +945,7 @@ export default function PitchPage() {
                 {
                   step: "01",
                   title: "CONNECT WALLET",
-                  desc: "SUI AND DBUSDC BALANCES DISPLAYED. READY TO TRADE.",
+                  desc: "SUI AND USDC BALANCES DISPLAYED. READY TO TRADE.",
                 },
                 {
                   step: "02",
