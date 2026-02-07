@@ -11,6 +11,7 @@ import { TeeAttestationService } from './tee-attestation.js';
 import { FlashLoanService } from './flash-loan-service.js';
 import { FlashLoanSettlementService } from './flash-loan-settlement.js';
 import { BatchEngine } from './batch-engine.js';
+import { logService } from './log-service.js';
 
 const app = express();
 app.use(cors());
@@ -40,6 +41,7 @@ listener.on('orderCommitted', async (order: CommittedOrder) => {
   if (order.encryptedData.length === 0) {
     teeService.incrementDecryptionFailures();
     console.log(`No encrypted data for ${order.commitment.slice(0, 16)}..., queuing for retry`);
+    logService.addLog('warn', 'engine', `No encrypted data for ${order.commitment.slice(0, 16)}..., queuing for retry`);
     orderBook.addPendingOrder(order);
     return;
   }
@@ -48,6 +50,7 @@ listener.on('orderCommitted', async (order: CommittedOrder) => {
   if (decrypted) {
     teeService.incrementOrdersDecrypted();
     console.log(`Decrypted order: ${order.commitment.slice(0, 16)}... | side=${decrypted.side}`);
+    logService.addLog('info', 'engine', `Decrypted order: ${order.commitment.slice(0, 16)}... | side=${decrypted.side}`);
 
     const enrichedOrder: DecryptedOrderInfo = {
       ...order,
@@ -61,6 +64,7 @@ listener.on('orderCommitted', async (order: CommittedOrder) => {
   } else {
     teeService.incrementDecryptionFailures();
     console.log(`Seal decryption failed for ${order.commitment.slice(0, 16)}..., queuing for retry`);
+    logService.addLog('warn', 'engine', `Seal decryption failed for ${order.commitment.slice(0, 16)}..., queuing for retry`);
     orderBook.addPendingOrder(order);
   }
 });
@@ -201,11 +205,18 @@ app.get('/tee/attestations', (req, res) => {
   });
 });
 
+app.get('/logs', (req, res) => {
+  res.json({ logs: logService.getRecentLogs(100) });
+});
+
 // ── Start server ─────────────────────────────────────────────────────
 app.listen(config.port, async () => {
   console.log(`Zebra Matching Engine running on port ${config.port}`);
+  logService.addLog('info', 'engine', `Zebra Matching Engine running on port ${config.port}`);
   console.log(`TEE mode: ${teeService.getMode()}`);
+  logService.addLog('info', 'engine', `TEE mode: ${teeService.getMode()}`);
   console.log(`TEE public key: ${teeService.getPublicKeyHex()}`);
+  logService.addLog('info', 'engine', `TEE public key: ${teeService.getPublicKeyHex()}`);
 
   if (!config.sealAllowlistId) {
     console.error('FATAL: SEAL_ALLOWLIST_ID not set — Seal encryption is mandatory');
@@ -213,11 +224,16 @@ app.listen(config.port, async () => {
     process.exit(1);
   }
   console.log('Seal encryption: enabled');
+  logService.addLog('info', 'engine', 'Seal encryption: enabled');
 
   console.log(`Sui RPC: ${config.suiRpcUrl}`);
+  logService.addLog('info', 'engine', `Sui RPC: ${config.suiRpcUrl}`);
   console.log(`Package: ${config.darkPoolPackage}`);
+  logService.addLog('info', 'engine', `Package: ${config.darkPoolPackage}`);
   console.log(`Pool: ${config.darkPoolObject}`);
+  logService.addLog('info', 'engine', `Pool: ${config.darkPoolObject}`);
   console.log(`MatcherCap: ${config.matcherCapId}`);
+  logService.addLog('info', 'engine', `MatcherCap: ${config.matcherCapId}`);
 
   // Start listening for events
   await listener.start();
@@ -226,6 +242,7 @@ app.listen(config.port, async () => {
 // Graceful shutdown
 process.on('SIGINT', () => {
   console.log('Shutting down...');
+  logService.addLog('info', 'engine', 'Shutting down...');
   listener.stop();
   process.exit(0);
 });
