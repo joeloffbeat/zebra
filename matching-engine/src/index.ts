@@ -9,6 +9,8 @@ import { SealService } from './seal-service.js';
 import { DeepBookService } from './deepbook-service.js';
 import { TeeAttestationService } from './tee-attestation.js';
 import { FlashLoanService } from './flash-loan-service.js';
+import { FlashLoanSettlementService } from './flash-loan-settlement.js';
+import { BatchEngine } from './batch-engine.js';
 
 const app = express();
 app.use(cors());
@@ -23,47 +25,13 @@ const matcher = new OrderMatcher(orderBook, deepBookService);
 const settlement = new SettlementService();
 const teeService = new TeeAttestationService(config.enclaveKeyPath, config.teeMode);
 const flashLoanService = new FlashLoanService();
+const flashLoanSettlement = new FlashLoanSettlementService();
 
 // Wire TEE service into settlement
 settlement.setTeeService(teeService);
 
-// Simple matching mutex to prevent concurrent matching
-let matchingInProgress = false;
-const pendingMatchQueue: (() => void)[] = [];
-
-async function tryMatchAndSettle() {
-  if (matchingInProgress) return;
-  matchingInProgress = true;
-
-  try {
-    const matches = await matcher.findMatches();
-
-    for (const match of matches) {
-      teeService.incrementMatchesFound();
-    }
-
-    for (const match of matches) {
-      const digest = await settlement.settleMatch(match);
-      if (digest) {
-        teeService.recordSettlement(digest, match.executionAmount);
-        matcher.setSettlementDigestForMatch(match.buyer.commitment, match.seller.commitment, digest);
-      }
-    }
-  } finally {
-    matchingInProgress = false;
-    // Process any queued match requests
-    const next = pendingMatchQueue.shift();
-    if (next) next();
-  }
-}
-
-function scheduleMatch() {
-  if (matchingInProgress) {
-    pendingMatchQueue.push(() => tryMatchAndSettle());
-  } else {
-    tryMatchAndSettle();
-  }
-}
+// Batch engine replaces immediate two-party matching
+const batchEngine = new BatchEngine(orderBook, matcher, settlement, flashLoanSettlement, teeService);
 
 // Handle new orders — Seal decryption is MANDATORY (no demo mode)
 listener.on('orderCommitted', async (order: CommittedOrder) => {
@@ -89,8 +57,7 @@ listener.on('orderCommitted', async (order: CommittedOrder) => {
       decryptedLockedAmount: decrypted.amount, // use decrypted amount as locked
     };
 
-    orderBook.addOrder(enrichedOrder);
-    scheduleMatch();
+    batchEngine.addOrder(enrichedOrder);
   } else {
     teeService.incrementDecryptionFailures();
     console.log(`Seal decryption failed for ${order.commitment.slice(0, 16)}..., queuing for retry`);
@@ -118,6 +85,7 @@ app.get('/status', (req, res) => {
     matcherAddress: settlement.getMatcherAddress(),
     orderBook: orderCounts,
     recentMatches: matcher.getRecentMatches(5).length,
+    batch: batchEngine.getState(),
   });
 });
 
@@ -165,6 +133,11 @@ app.get('/matches', (req, res) => {
       settlementDigest: m.settlementDigest ?? null,
     })),
   });
+});
+
+// ── Batch status endpoint ─────────────────────────────────────────────
+app.get('/batch/status', (req, res) => {
+  res.json(batchEngine.getState());
 });
 
 app.get('/deepbook/midprice', async (req, res) => {
