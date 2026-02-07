@@ -129,7 +129,8 @@ export class FlashLoanSettlementService {
       });
 
       // 4. Return flash loan using extracted SUI from vault
-      this.dbClient.flashLoans.returnBaseAsset(
+      // returnBaseAsset returns a remainder Coin (no drop ability) — must be consumed
+      const remainderCoin = this.dbClient.flashLoans.returnBaseAsset(
         'SUI_DBUSDC',
         amountInSui,
         extractedSui,
@@ -139,8 +140,8 @@ export class FlashLoanSettlementService {
       // 5. Transfer USDC to seller
       tx.transferObjects([usdcCoin], sell.owner);
 
-      // 6. Transfer remaining base + deep refund to TEE address
-      tx.transferObjects([remBase, deepRefund], teeAddress);
+      // 6. Transfer remaining base + deep refund + remainder to TEE address
+      tx.transferObjects([remBase, deepRefund, remainderCoin], teeAddress);
     }
 
     const result = await this.suiClient.signAndExecuteTransaction({
@@ -202,7 +203,8 @@ export class FlashLoanSettlementService {
     });
 
     // 4. Repay flash loan
-    this.dbClient.flashLoans.returnBaseAsset(
+    // returnBaseAsset returns a remainder Coin (no drop ability) — must be consumed
+    const remainderCoin = this.dbClient.flashLoans.returnBaseAsset(
       'SUI_DBUSDC',
       amountInSui,
       extractedSui,
@@ -212,8 +214,8 @@ export class FlashLoanSettlementService {
     // 5. Transfer USDC to seller
     tx.transferObjects([usdcCoin], sell.owner);
 
-    // 6. Transfer leftovers to TEE
-    tx.transferObjects([remBase, deepRefund], teeAddress);
+    // 6. Transfer leftovers + remainder to TEE
+    tx.transferObjects([remBase, deepRefund, remainderCoin], teeAddress);
 
     const result = await this.suiClient.signAndExecuteTransaction({
       signer: this.keypair!,

@@ -66,12 +66,16 @@ export class FlashLoanService {
       )(tx as any);
 
       // Return immediately (demo — no intermediate operations)
-      this.dbClient.flashLoans.returnBaseAsset(
+      // returnBaseAsset splits the coin and returns the remainder — must be consumed
+      const remainderCoin = this.dbClient.flashLoans.returnBaseAsset(
         poolKey,
         borrowAmount,
         baseAsset,
         flashLoan,
       )(tx as any);
+
+      // Transfer remainder to signer (Coin has no drop ability in Move)
+      tx.transferObjects([remainderCoin], this.keypair.toSuiAddress());
 
       const result = await this.suiClient.signAndExecuteTransaction({
         signer: this.keypair,
