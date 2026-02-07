@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState, useCallback, type ReactNode } from "react";
 import { Button } from "@/components/ui";
+import { EncryptedText } from "@/components/ui/encrypted-text";
 
 const SLIDE_IDS = [
   "title",
@@ -120,6 +121,41 @@ function Slide({
   );
 }
 
+// ─── Encrypted text helpers ─────────────────────────────────────────────────
+
+// Short labels / section tags
+function ELabel({ text }: { text: string }) {
+  return (
+    <EncryptedText
+      text={text}
+      encryptedClassName="opacity-40"
+      revealDelayMs={40}
+    />
+  );
+}
+
+// Subtitles and mid-length text
+function ESub({ text }: { text: string }) {
+  return (
+    <EncryptedText
+      text={text}
+      encryptedClassName="opacity-30"
+      revealDelayMs={25}
+    />
+  );
+}
+
+// Longer descriptions / body text
+function EDesc({ text }: { text: string }) {
+  return (
+    <EncryptedText
+      text={text}
+      encryptedClassName="opacity-30"
+      revealDelayMs={15}
+    />
+  );
+}
+
 // ─── Main Page ──────────────────────────────────────────────────────────────
 
 export default function PitchPage() {
@@ -172,7 +208,7 @@ export default function PitchPage() {
           <div className="text-center space-y-10">
             <FadeIn isVisible={isVisible} delay={0}>
               <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
-                ETHGLOBAL HACKMONEY 2026
+                <ELabel text="ETHGLOBAL HACKMONEY 2026" />
               </div>
             </FadeIn>
 
@@ -188,20 +224,20 @@ export default function PitchPage() {
 
             <FadeIn isVisible={isVisible} delay={600}>
               <p className="text-[22px] md:text-[28px] tracking-[0.15em]">
-                THE FIRST ZK DARK POOL ON SUI
+                <ESub text="THE FIRST ZK DARK POOL ON SUI" />
               </p>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={800}>
               <p className="text-[14px] tracking-widest text-muted-foreground">
-                PRIVATE LIMIT ORDERS · ENCRYPTED SETTLEMENT · ZERO ON-CHAIN LEAKAGE
+                <EDesc text="PRIVATE LIMIT ORDERS · ENCRYPTED SETTLEMENT · ZERO ON-CHAIN LEAKAGE" />
               </p>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={1000}>
               <div className="pt-10">
                 <span className="text-[13px] tracking-widest text-muted-foreground animate-pulse">
-                  SCROLL TO EXPLORE
+                  <ELabel text="SCROLL TO EXPLORE" />
                 </span>
               </div>
             </FadeIn>
@@ -218,7 +254,7 @@ export default function PitchPage() {
             <div className="space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
                 <div className="text-[15px] tracking-[0.3em] opacity-50">
-                  THE PROBLEM
+                  <ELabel text="THE PROBLEM" />
                 </div>
               </FadeIn>
 
@@ -232,8 +268,7 @@ export default function PitchPage() {
 
               <FadeIn isVisible={isVisible} delay={300}>
                 <p className="text-[16px] tracking-wide opacity-60 leading-relaxed max-w-3xl">
-                  WHEN YOU PLACE AN ORDER ON DEEPBOOK, YOUR LIMIT PRICE, ORDER SIZE,
-                  WALLET ADDRESS, AND TRADE HISTORY ARE VISIBLE TO THE ENTIRE NETWORK.
+                  <EDesc text="WHEN YOU PLACE AN ORDER ON DEEPBOOK, YOUR LIMIT PRICE, ORDER SIZE, WALLET ADDRESS, AND TRADE HISTORY ARE VISIBLE TO THE ENTIRE NETWORK." />
                 </p>
               </FadeIn>
             </div>
@@ -246,8 +281,7 @@ export default function PitchPage() {
                     ORDER BOOK EXPOSURE
                   </h3>
                   <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
-                    YOUR LIMIT PRICE, ORDER SIZE, AND WALLET ADDRESS ARE VISIBLE
-                    TO EVERYONE ON THE NETWORK. MEV BOTS EXPLOIT THIS IN REAL-TIME.
+                    <EDesc text="YOUR LIMIT PRICE, ORDER SIZE, AND WALLET ADDRESS ARE VISIBLE TO EVERYONE ON THE NETWORK. MEV BOTS EXPLOIT THIS IN REAL-TIME." />
                   </p>
                 </div>
               </FadeIn>
@@ -257,8 +291,7 @@ export default function PitchPage() {
                   <div className="text-[16px] tracking-widest opacity-40">02</div>
                   <h3 className="text-[18px] tracking-widest">MARKET IMPACT</h3>
                   <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
-                    A WHALE PLACING A LARGE SELL ORDER MOVES THE MARKET BEFORE IT
-                    FILLS. THE PRICE SHIFTS AGAINST YOU BEFORE EXECUTION.
+                    <EDesc text="A WHALE PLACING A LARGE SELL ORDER MOVES THE MARKET BEFORE IT FILLS. THE PRICE SHIFTS AGAINST YOU BEFORE EXECUTION." />
                   </p>
                 </div>
               </FadeIn>
@@ -268,8 +301,7 @@ export default function PitchPage() {
                   <div className="text-[16px] tracking-widest opacity-40">03</div>
                   <h3 className="text-[18px] tracking-widest">STRATEGY LEAKAGE</h3>
                   <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
-                    YOUR ON-CHAIN TRADING HISTORY IS PUBLIC. COMPETITORS TRACK YOUR
-                    ADDRESSES, COPY YOUR STRATEGIES, AND TRADE AGAINST YOU.
+                    <EDesc text="YOUR ON-CHAIN TRADING HISTORY IS PUBLIC. COMPETITORS TRACK YOUR ADDRESSES, COPY YOUR STRATEGIES, AND TRADE AGAINST YOU." />
                   </p>
                 </div>
               </FadeIn>
@@ -286,7 +318,7 @@ export default function PitchPage() {
           <div className="space-y-16">
             <FadeIn isVisible={isVisible} delay={0}>
               <div className="text-[15px] tracking-[0.3em] text-muted-foreground text-center">
-                THE OPPORTUNITY
+                <ELabel text="THE OPPORTUNITY" />
               </div>
             </FadeIn>
 
@@ -298,10 +330,10 @@ export default function PitchPage() {
                   </div>
                   <div className="w-10 h-px bg-foreground mx-auto" />
                   <p className="text-[16px] tracking-widest text-muted-foreground">
-                    ANNUAL VOLUME IN TRADFI DARK POOLS
+                    <ESub text="ANNUAL VOLUME IN TRADFI DARK POOLS" />
                   </p>
                   <p className="text-[14px] tracking-wide text-muted-foreground opacity-60">
-                    IEX · LIQUIDNET · CROSSFINDER · SIGMA X
+                    <EDesc text="IEX · LIQUIDNET · CROSSFINDER · SIGMA X" />
                   </p>
                 </div>
               </FadeIn>
@@ -313,10 +345,10 @@ export default function PitchPage() {
                   </div>
                   <div className="w-10 h-px bg-foreground mx-auto" />
                   <p className="text-[16px] tracking-widest text-muted-foreground">
-                    PRIVACY DEXS ON SUI
+                    <ESub text="PRIVACY DEXS ON SUI" />
                   </p>
                   <p className="text-[14px] tracking-wide text-muted-foreground opacity-60">
-                    DEEPBOOK · CETUS · TURBOS · KRIYA — ALL TRANSPARENT
+                    <EDesc text="DEEPBOOK · CETUS · TURBOS · KRIYA — ALL TRANSPARENT" />
                   </p>
                 </div>
               </FadeIn>
@@ -324,7 +356,7 @@ export default function PitchPage() {
 
             <FadeIn isVisible={isVisible} delay={700}>
               <p className="text-center text-[16px] tracking-widest text-muted-foreground">
-                TRADITIONAL FINANCE SOLVED THIS DECADES AGO. SUI HAS NO EQUIVALENT.
+                <ESub text="TRADITIONAL FINANCE SOLVED THIS DECADES AGO. SUI HAS NO EQUIVALENT." />
               </p>
             </FadeIn>
           </div>
@@ -339,7 +371,7 @@ export default function PitchPage() {
           <div className="text-center space-y-12">
             <FadeIn isVisible={isVisible} delay={0}>
               <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
-                THE SOLUTION
+                <ELabel text="THE SOLUTION" />
               </div>
             </FadeIn>
 
@@ -355,10 +387,7 @@ export default function PitchPage() {
 
             <FadeIn isVisible={isVisible} delay={600}>
               <p className="text-[16px] md:text-[18px] tracking-wide text-muted-foreground leading-relaxed max-w-3xl mx-auto">
-                ZEBRA ENABLES PRIVATE LIMIT ORDERS WHERE PRICES ARE HIDDEN, MATCHING
-                HAPPENS INSIDE A SECURE ENCLAVE, AND SETTLEMENT ROUTES FUNDS TO
-                ENCRYPTED RECEIVER ADDRESSES — BREAKING EVERY LINK BETWEEN ORDER
-                PLACEMENT AND FUND RECEIPT.
+                <EDesc text="ZEBRA ENABLES PRIVATE LIMIT ORDERS WHERE PRICES ARE HIDDEN, MATCHING HAPPENS INSIDE A SECURE ENCLAVE, AND SETTLEMENT ROUTES FUNDS TO ENCRYPTED RECEIVER ADDRESSES — BREAKING EVERY LINK BETWEEN ORDER PLACEMENT AND FUND RECEIPT." />
               </p>
             </FadeIn>
 
@@ -366,30 +395,30 @@ export default function PitchPage() {
               <div className="flex flex-col md:flex-row items-center justify-center gap-6 pt-4">
                 <div className="border border-border px-8 py-4 space-y-2">
                   <div className="text-[13px] tracking-widest text-muted-foreground">
-                    INPUT
+                    <ELabel text="INPUT" />
                   </div>
                   <div className="text-[16px] tracking-widest">
-                    ENCRYPTED ORDER + ZK PROOF
+                    <ESub text="ENCRYPTED ORDER + ZK PROOF" />
                   </div>
                 </div>
                 <div className="text-muted-foreground text-2xl hidden md:block">→</div>
                 <div className="text-muted-foreground text-2xl md:hidden">↓</div>
                 <div className="border border-border px-8 py-4 space-y-2">
                   <div className="text-[13px] tracking-widest text-muted-foreground">
-                    ON-CHAIN
+                    <ELabel text="ON-CHAIN" />
                   </div>
                   <div className="text-[16px] tracking-widest">
-                    COMMITMENT HASH ONLY
+                    <ESub text="COMMITMENT HASH ONLY" />
                   </div>
                 </div>
                 <div className="text-muted-foreground text-2xl hidden md:block">→</div>
                 <div className="text-muted-foreground text-2xl md:hidden">↓</div>
                 <div className="border border-border px-8 py-4 space-y-2">
                   <div className="text-[13px] tracking-widest text-muted-foreground">
-                    OUTPUT
+                    <ELabel text="OUTPUT" />
                   </div>
                   <div className="text-[16px] tracking-widest">
-                    FUNDS AT UNRELATED ADDRESSES
+                    <ESub text="FUNDS AT UNRELATED ADDRESSES" />
                   </div>
                 </div>
               </div>
@@ -407,7 +436,7 @@ export default function PitchPage() {
             <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
                 <div className="text-[15px] tracking-[0.3em] opacity-50">
-                  THE PIPELINE
+                  <ELabel text="THE PIPELINE" />
                 </div>
               </FadeIn>
 
@@ -419,9 +448,7 @@ export default function PitchPage() {
 
               <FadeIn isVisible={isVisible} delay={300}>
                 <p className="text-[14px] tracking-wide opacity-50 max-w-2xl mx-auto leading-relaxed">
-                  EACH LAYER ADDRESSES A DIFFERENT PRIVACY VECTOR. TOGETHER THEY
-                  COVER VALIDITY, CONFIDENTIALITY, EXECUTION, OPACITY, LIQUIDITY,
-                  AND UNLINKABILITY.
+                  <EDesc text="EACH LAYER ADDRESSES A DIFFERENT PRIVACY VECTOR. TOGETHER THEY COVER VALIDITY, CONFIDENTIALITY, EXECUTION, OPACITY, LIQUIDITY, AND UNLINKABILITY." />
                 </p>
               </FadeIn>
             </div>
@@ -472,12 +499,12 @@ export default function PitchPage() {
                         {layer.num}
                       </span>
                       <span className="text-[12px] tracking-widest opacity-30 border border-current/20 px-3 py-1">
-                        {layer.tag}
+                        <ELabel text={layer.tag} />
                       </span>
                     </div>
                     <h3 className="text-[18px] tracking-widest">{layer.title}</h3>
                     <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
-                      {layer.desc}
+                      <EDesc text={layer.desc} />
                     </p>
                   </div>
                 </FadeIn>
@@ -496,7 +523,7 @@ export default function PitchPage() {
             <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
                 <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
-                  ARCHITECTURE
+                  <ELabel text="ARCHITECTURE" />
                 </div>
               </FadeIn>
 
@@ -513,29 +540,31 @@ export default function PitchPage() {
               <FadeIn isVisible={isVisible} delay={300}>
                 <div className="border border-border p-8">
                   <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
-                    BROWSER
+                    <ELabel text="BROWSER" />
                   </div>
                   <div className="grid grid-cols-3 gap-4">
                     <div className="border border-border/50 p-4 text-center">
-                      <div className="text-[15px] tracking-widest">ZK PROOF</div>
+                      <div className="text-[15px] tracking-widest">
+                        <ESub text="ZK PROOF" />
+                      </div>
                       <div className="text-[13px] tracking-wide text-muted-foreground mt-2">
-                        SNARKJS · CIRCOM
+                        <EDesc text="SNARKJS · CIRCOM" />
                       </div>
                     </div>
                     <div className="border border-border/50 p-4 text-center">
                       <div className="text-[15px] tracking-widest">
-                        SEAL ENCRYPT
+                        <ESub text="SEAL ENCRYPT" />
                       </div>
                       <div className="text-[13px] tracking-wide text-muted-foreground mt-2">
-                        SUI SEAL SDK
+                        <EDesc text="SUI SEAL SDK" />
                       </div>
                     </div>
                     <div className="border border-border/50 p-4 text-center">
                       <div className="text-[15px] tracking-widest">
-                        WALLET
+                        <ESub text="WALLET" />
                       </div>
                       <div className="text-[13px] tracking-wide text-muted-foreground mt-2">
-                        DAPP-KIT
+                        <EDesc text="DAPP-KIT" />
                       </div>
                     </div>
                   </div>
@@ -548,7 +577,7 @@ export default function PitchPage() {
                   <div className="flex flex-col items-center gap-1">
                     <div className="w-px h-5 bg-border" />
                     <div className="text-[13px] tracking-widest text-muted-foreground">
-                      SUBMIT TX
+                      <ELabel text="SUBMIT TX" />
                     </div>
                     <div className="w-px h-5 bg-border" />
                     <div className="text-muted-foreground text-lg">↓</div>
@@ -561,7 +590,7 @@ export default function PitchPage() {
                 <div className="grid md:grid-cols-2 gap-6">
                   <div className="border border-border p-8">
                     <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
-                      DARK POOL CONTRACT (MOVE)
+                      <ELabel text="DARK POOL CONTRACT (MOVE)" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {[
@@ -574,7 +603,7 @@ export default function PitchPage() {
                           key={item}
                           className="border border-border/50 p-3 text-center text-[14px] tracking-widest"
                         >
-                          {item}
+                          <ESub text={item} />
                         </div>
                       ))}
                     </div>
@@ -582,12 +611,12 @@ export default function PitchPage() {
 
                   <div className="border border-border p-8">
                     <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
-                      DEEPBOOK V3
+                      <ELabel text="DEEPBOOK V3" />
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                       {[
                         "FLASH LOANS",
-                        "SUI ↔ USDC",
+                        "SUI <> USDC",
                         "MID-PRICE",
                         "HOT POTATO",
                       ].map((item) => (
@@ -595,7 +624,7 @@ export default function PitchPage() {
                           key={item}
                           className="border border-border/50 p-3 text-center text-[14px] tracking-widest"
                         >
-                          {item}
+                          <ESub text={item} />
                         </div>
                       ))}
                     </div>
@@ -610,7 +639,7 @@ export default function PitchPage() {
                     <div className="text-muted-foreground text-lg">↑</div>
                     <div className="w-px h-5 bg-border" />
                     <div className="text-[13px] tracking-widest text-muted-foreground">
-                      EVENTS · PTBS
+                      <ELabel text="EVENTS · PTBS" />
                     </div>
                     <div className="w-px h-5 bg-border" />
                     <div className="text-muted-foreground text-lg">↓</div>
@@ -622,7 +651,7 @@ export default function PitchPage() {
               <FadeIn isVisible={isVisible} delay={750}>
                 <div className="border border-border p-8">
                   <div className="text-[14px] tracking-[0.3em] text-muted-foreground mb-5">
-                    TEE MATCHING ENGINE (NAUTILUS)
+                    <ELabel text="TEE MATCHING ENGINE (NAUTILUS)" />
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                     {[
@@ -635,7 +664,7 @@ export default function PitchPage() {
                         key={item}
                         className="border border-border/50 p-3 text-center text-[14px] tracking-widest"
                       >
-                        {item}
+                        <ESub text={item} />
                       </div>
                     ))}
                   </div>
@@ -655,7 +684,7 @@ export default function PitchPage() {
             <div className="space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
                 <div className="text-[15px] tracking-[0.3em] opacity-50">
-                  CORE DIFFERENTIATOR
+                  <ELabel text="CORE DIFFERENTIATOR" />
                 </div>
               </FadeIn>
 
@@ -669,8 +698,7 @@ export default function PitchPage() {
 
               <FadeIn isVisible={isVisible} delay={300}>
                 <p className="text-[16px] tracking-wide opacity-60 leading-relaxed max-w-3xl">
-                  MOST PRIVACY DEX DESIGNS STOP AT HIDING THE ORDER. BUT SETTLEMENT
-                  STILL REVEALS THE RECIPIENT. ZEBRA BREAKS THIS ENTIRELY.
+                  <EDesc text="MOST PRIVACY DEX DESIGNS STOP AT HIDING THE ORDER. BUT SETTLEMENT STILL REVEALS THE RECIPIENT. ZEBRA BREAKS THIS ENTIRELY." />
                 </p>
               </FadeIn>
             </div>
@@ -680,28 +708,32 @@ export default function PitchPage() {
               <FadeIn isVisible={isVisible} delay={450}>
                 <div className="border border-current/20 p-8 space-y-6">
                   <div className="text-[14px] tracking-[0.3em] opacity-40">
-                    WITHOUT ZEBRA
+                    <ELabel text="WITHOUT ZEBRA" />
                   </div>
 
                   <div className="space-y-4 font-mono">
                     <div className="flex items-center gap-4">
                       <span className="text-[15px] tracking-wide border border-current/20 px-3 py-1.5">
-                        0xAAA
+                        <ESub text="0xAAA" />
                       </span>
-                      <span className="text-[15px] opacity-40">PLACES ORDER</span>
+                      <span className="text-[15px] opacity-40">
+                        <ESub text="PLACES ORDER" />
+                      </span>
                     </div>
                     <div className="text-center text-[16px] opacity-30">↓</div>
                     <div className="flex items-center gap-4">
                       <span className="text-[15px] tracking-wide border border-current/20 px-3 py-1.5">
-                        0xAAA
+                        <ESub text="0xAAA" />
                       </span>
-                      <span className="text-[15px] opacity-40">RECEIVES FUNDS</span>
+                      <span className="text-[15px] opacity-40">
+                        <ESub text="RECEIVES FUNDS" />
+                      </span>
                     </div>
                   </div>
 
                   <div className="border-t border-current/10 pt-4">
                     <span className="text-[14px] tracking-widest opacity-40">
-                      TRIVIALLY LINKED
+                      <ESub text="TRIVIALLY LINKED" />
                     </span>
                   </div>
                 </div>
@@ -710,34 +742,40 @@ export default function PitchPage() {
               <FadeIn isVisible={isVisible} delay={600}>
                 <div className="border border-current/40 p-8 space-y-6">
                   <div className="text-[14px] tracking-[0.3em]">
-                    WITH ZEBRA
+                    <ELabel text="WITH ZEBRA" />
                   </div>
 
                   <div className="space-y-4 font-mono">
                     <div className="flex items-center gap-4">
                       <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
-                        0xAAA
+                        <ESub text="0xAAA" />
                       </span>
-                      <span className="text-[15px] opacity-50">PLACES ORDER</span>
+                      <span className="text-[15px] opacity-50">
+                        <ESub text="PLACES ORDER" />
+                      </span>
                     </div>
                     <div className="text-center text-[16px] opacity-30">↓</div>
                     <div className="flex items-center gap-4">
                       <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
-                        0xBBB
+                        <ESub text="0xBBB" />
                       </span>
-                      <span className="text-[15px] opacity-50">RECEIVES 60%</span>
+                      <span className="text-[15px] opacity-50">
+                        <ESub text="RECEIVES 60%" />
+                      </span>
                     </div>
                     <div className="flex items-center gap-4">
                       <span className="text-[15px] tracking-wide border border-current/30 px-3 py-1.5">
-                        0xCCC
+                        <ESub text="0xCCC" />
                       </span>
-                      <span className="text-[15px] opacity-50">RECEIVES 40%</span>
+                      <span className="text-[15px] opacity-50">
+                        <ESub text="RECEIVES 40%" />
+                      </span>
                     </div>
                   </div>
 
                   <div className="border-t border-current/20 pt-4">
                     <span className="text-[14px] tracking-widest">
-                      NO VISIBLE LINK
+                      <ESub text="NO VISIBLE LINK" />
                     </span>
                   </div>
                 </div>
@@ -746,10 +784,7 @@ export default function PitchPage() {
 
             <FadeIn isVisible={isVisible} delay={750}>
               <p className="text-[14px] tracking-wide opacity-50 leading-relaxed max-w-3xl">
-                RECEIVER ADDRESSES AND SPLIT PERCENTAGES LIVE INSIDE THE
-                SEAL-ENCRYPTED PAYLOAD. THE TEE READS THEM AT SETTLEMENT AND
-                ROUTES FUNDS ACCORDINGLY. ON-CHAIN, THERE IS NO CONNECTION
-                BETWEEN THE TRADER AND THE RECIPIENTS.
+                <EDesc text="RECEIVER ADDRESSES AND SPLIT PERCENTAGES LIVE INSIDE THE SEAL-ENCRYPTED PAYLOAD. THE TEE READS THEM AT SETTLEMENT AND ROUTES FUNDS ACCORDINGLY. ON-CHAIN, THERE IS NO CONNECTION BETWEEN THE TRADER AND THE RECIPIENTS." />
               </p>
             </FadeIn>
           </div>
@@ -765,7 +800,7 @@ export default function PitchPage() {
             <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
                 <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
-                  ECOSYSTEM
+                  <ELabel text="ECOSYSTEM" />
                 </div>
               </FadeIn>
 
@@ -777,8 +812,7 @@ export default function PitchPage() {
 
               <FadeIn isVisible={isVisible} delay={300}>
                 <p className="text-[14px] tracking-wide text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                  EVERY CORE COMPONENT LEVERAGES A SUI-NATIVE PRIMITIVE. NO
-                  EXTERNAL CHAINS, NO BRIDGES, NO THIRD-PARTY INFRASTRUCTURE.
+                  <EDesc text="EVERY CORE COMPONENT LEVERAGES A SUI-NATIVE PRIMITIVE. NO EXTERNAL CHAINS, NO BRIDGES, NO THIRD-PARTY INFRASTRUCTURE." />
                 </p>
               </FadeIn>
             </div>
@@ -797,7 +831,7 @@ export default function PitchPage() {
                 },
                 {
                   title: "DEEPBOOK V3",
-                  desc: "FLASH LOAN BORROWING VIA HOT POTATO PATTERN. BORROW → SWAP → SETTLE → REPAY IN A SINGLE PTB. THE FLASH LOAN OBJECT HAS NO DROP ABILITY — FORCING ATOMIC EXECUTION.",
+                  desc: "FLASH LOAN BORROWING VIA HOT POTATO PATTERN. BORROW, SWAP, SETTLE, REPAY IN A SINGLE PTB. THE FLASH LOAN OBJECT HAS NO DROP ABILITY — FORCING ATOMIC EXECUTION.",
                   tag: "LIQUIDITY",
                 },
                 {
@@ -811,11 +845,11 @@ export default function PitchPage() {
                     <div className="flex items-center justify-between">
                       <h3 className="text-[18px] tracking-widest">{item.title}</h3>
                       <span className="text-[12px] tracking-widest text-muted-foreground border border-border px-3 py-1">
-                        {item.tag}
+                        <ELabel text={item.tag} />
                       </span>
                     </div>
                     <p className="text-[14px] tracking-wide text-muted-foreground leading-relaxed">
-                      {item.desc}
+                      <EDesc text={item.desc} />
                     </p>
                   </div>
                 </FadeIn>
@@ -834,7 +868,7 @@ export default function PitchPage() {
             <div className="space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
                 <div className="text-[15px] tracking-[0.3em] opacity-50">
-                  INNOVATION
+                  <ELabel text="INNOVATION" />
                 </div>
               </FadeIn>
 
@@ -876,7 +910,7 @@ export default function PitchPage() {
                     <div className="border-l border-current/20 pl-8 space-y-3">
                       <h3 className="text-[18px] tracking-widest">{item.title}</h3>
                       <p className="text-[14px] tracking-wide opacity-50 leading-relaxed max-w-3xl">
-                        {item.desc}
+                        <EDesc text={item.desc} />
                       </p>
                     </div>
                   </div>
@@ -896,7 +930,7 @@ export default function PitchPage() {
             <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
                 <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
-                  LIVE DEMO
+                  <ELabel text="LIVE DEMO" />
                 </div>
               </FadeIn>
 
@@ -948,7 +982,7 @@ export default function PitchPage() {
                     <div className="border-l border-border pl-5 space-y-2 pt-1">
                       <h3 className="text-[16px] tracking-widest">{item.title}</h3>
                       <p className="text-[14px] tracking-wide text-muted-foreground leading-relaxed">
-                        {item.desc}
+                        <EDesc text={item.desc} />
                       </p>
                     </div>
                   </div>
@@ -968,7 +1002,7 @@ export default function PitchPage() {
             <div className="text-center space-y-5">
               <FadeIn isVisible={isVisible} delay={0}>
                 <div className="text-[15px] tracking-[0.3em] text-muted-foreground">
-                  TECHNOLOGY
+                  <ELabel text="TECHNOLOGY" />
                 </div>
               </FadeIn>
 
@@ -1036,13 +1070,13 @@ export default function PitchPage() {
                     className="grid grid-cols-3 gap-6 p-5 items-center"
                   >
                     <div className="text-[14px] tracking-widest text-muted-foreground">
-                      {row.layer}
+                      <ESub text={row.layer} />
                     </div>
                     <div className="text-[15px] tracking-widest font-mono">
-                      {row.tech}
+                      <ESub text={row.tech} />
                     </div>
                     <div className="text-[13px] tracking-wide text-muted-foreground">
-                      {row.detail}
+                      <EDesc text={row.detail} />
                     </div>
                   </div>
                 ))}
@@ -1060,7 +1094,7 @@ export default function PitchPage() {
           <div className="text-center space-y-12">
             <FadeIn isVisible={isVisible} delay={0}>
               <div className="text-[15px] tracking-[0.3em] opacity-50">
-                ETHGLOBAL HACKMONEY 2026 · SOLO BUILD
+                <ELabel text="ETHGLOBAL HACKMONEY 2026 · SOLO BUILD" />
               </div>
             </FadeIn>
 
@@ -1076,17 +1110,13 @@ export default function PitchPage() {
 
             <FadeIn isVisible={isVisible} delay={600}>
               <p className="text-[22px] md:text-[28px] tracking-[0.15em]">
-                PRIVACY-FIRST TRADING
-                <br />
-                INFRASTRUCTURE FOR SUI
+                <ESub text="PRIVACY-FIRST TRADING INFRASTRUCTURE FOR SUI" />
               </p>
             </FadeIn>
 
             <FadeIn isVisible={isVisible} delay={800}>
               <p className="text-[15px] tracking-wide opacity-50 max-w-xl mx-auto leading-relaxed">
-                ON-CHAIN, AN OBSERVER SEES A COMMITMENT HASH GO IN AND FUNDS
-                ARRIVE AT UNRELATED ADDRESSES. THERE IS NO VISIBLE CONNECTION
-                BETWEEN THE TRADER, THE ORDER, AND THE SETTLEMENT.
+                <EDesc text="ON-CHAIN, AN OBSERVER SEES A COMMITMENT HASH GO IN AND FUNDS ARRIVE AT UNRELATED ADDRESSES. THERE IS NO VISIBLE CONNECTION BETWEEN THE TRADER, THE ORDER, AND THE SETTLEMENT." />
               </p>
             </FadeIn>
 
@@ -1106,13 +1136,13 @@ export default function PitchPage() {
             <FadeIn isVisible={isVisible} delay={1200}>
               <div className="pt-8 space-y-2">
                 <div className="flex items-center justify-center gap-8 text-[14px] tracking-widest opacity-40">
-                  <span>SUI</span>
+                  <span><ELabel text="SUI" /></span>
                   <span>·</span>
-                  <span>DEEPBOOK</span>
+                  <span><ELabel text="DEEPBOOK" /></span>
                   <span>·</span>
-                  <span>NAUTILUS</span>
+                  <span><ELabel text="NAUTILUS" /></span>
                   <span>·</span>
-                  <span>SEAL</span>
+                  <span><ELabel text="SEAL" /></span>
                 </div>
               </div>
             </FadeIn>
