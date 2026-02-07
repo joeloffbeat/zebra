@@ -182,7 +182,7 @@ export default function TradePage() {
     }
 
     return order;
-  }, [amount, price, side, expiry, submitOrder, receivers]);
+  }, [amount, price, side, expiry, submitOrder, receivers, address]);
 
   const handleCancel = useCallback(
     (commitment: string) => {
