@@ -396,9 +396,9 @@ export function OrderConfirmationModal({
                   href={`https://suiscan.xyz/testnet/tx/${settlementDigest}`}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="text-[10px] tracking-widest text-blue-400 hover:text-blue-300 underline underline-offset-2"
+                  className="text-[10px] tracking-widest text-foreground hover:text-foreground/80"
                 >
-                  VIEW SETTLEMENT
+                  [VIEW SETTLEMENT]
                 </a>
               )}
               <Button onClick={() => handleOpenChange(false)}>
