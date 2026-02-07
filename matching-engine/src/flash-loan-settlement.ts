@@ -12,6 +12,8 @@ import { DeepBookService } from './deepbook-service.js';
 
 // Maximum acceptable slippage for DeepBook swaps (10%)
 const MAX_SLIPPAGE = 0.10;
+// DBUSDC has 6 decimals
+const DBUSDC_DECIMALS = 1_000_000;
 
 export interface FlashLoanSettlementResult {
   success: boolean;
@@ -190,6 +192,12 @@ export class FlashLoanSettlementService {
         minOut: minDbusdc,
       })(tx as any);
 
+      // 2b. Enforce minimum output (DeepBook testnet doesn't enforce minQuoteOut).
+      //     Split minOut from the DBUSDC coin — aborts if coin value < minOut.
+      const minOutOnChain = Math.max(1, Math.round(minDbusdc * DBUSDC_DECIMALS));
+      const [assertCoin] = tx.splitCoins(usdcCoin, [tx.pure.u64(minOutOnChain)]);
+      tx.mergeCoins(usdcCoin, [assertCoin]);
+
       // 3. Extract seller's SUI from dark pool vault via settle_single_base
       const extractedSui = tx.moveCall({
         target: `${config.darkPoolPackage}::dark_pool::settle_single_base`,
@@ -281,6 +289,11 @@ export class FlashLoanSettlementService {
       deepAmount: 0,
       minOut: minDbusdc,
     })(tx as any);
+
+    // 2b. Enforce minimum output (DeepBook testnet doesn't enforce minQuoteOut)
+    const minOutOnChain = Math.max(1, Math.round(minDbusdc * DBUSDC_DECIMALS));
+    const [assertCoin] = tx.splitCoins(usdcCoin, [tx.pure.u64(minOutOnChain)]);
+    tx.mergeCoins(usdcCoin, [assertCoin]);
 
     // 3. Extract from vault
     const extractedSui = tx.moveCall({
