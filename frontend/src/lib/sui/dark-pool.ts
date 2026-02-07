@@ -56,6 +56,7 @@ export async function submitHiddenOrder(
 
   onProgress?.("seal-encrypt", "active");
   console.log('[ZEBRA] Encrypting order with Seal...');
+  const sealStart = performance.now();
   const { encryptedBytes } = await encryptOrderData(
     {
       side: params.side === 'buy' ? 1 : 0,
@@ -65,10 +66,12 @@ export async function submitHiddenOrder(
     },
     SEAL_ALLOWLIST_ID,
   );
+  const sealDurationMs = Math.round(performance.now() - sealStart);
   const encryptedData = new Uint8Array(encryptedBytes);
   const encryptedHex = Array.from(encryptedData).map(b => b.toString(16).padStart(2, '0')).join('');
-  console.log('[ZEBRA] Order encrypted, building transaction...');
+  console.log('[ZEBRA] Order encrypted, building transaction...', `(${sealDurationMs}ms)`);
   onProgress?.("seal-encrypt", "complete", undefined, {
+    durationMs: String(sealDurationMs),
     encryptedHex,
     byteLength: String(encryptedData.length),
   });

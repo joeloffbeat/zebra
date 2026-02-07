@@ -1,5 +1,6 @@
 "use client";
 
+import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface OrderLogPanelProps {
@@ -27,16 +28,22 @@ function LogSection({
   );
 }
 
-function TxLink({ digest, label }: { digest: string; label?: string }) {
+function TxRow({ label, digest }: { label: string; digest: string }) {
   return (
-    <a
-      href={`https://suiscan.xyz/testnet/tx/${digest}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-[10px] font-mono text-blue-400 hover:text-blue-300 underline underline-offset-2 break-all"
-    >
-      {label || digest}
-    </a>
+    <div className="flex items-center gap-2">
+      <p className="text-[9px] font-mono text-foreground/80 break-all flex-1">
+        {digest}
+      </p>
+      <a
+        href={`https://suiscan.xyz/testnet/tx/${digest}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="shrink-0 p-1 border border-border hover:bg-muted/50 transition-colors"
+        title={`View ${label} on SuiScan`}
+      >
+        <ExternalLink className="w-3 h-3 text-blue-400" />
+      </a>
+    </div>
   );
 }
 
@@ -94,7 +101,7 @@ export function OrderLogPanel({ stepData, settlementDigest }: OrderLogPanelProps
         )}
       </LogSection>
 
-      <LogSection title="SEAL ENCRYPTED DATA" visible={!!sealData}>
+      <LogSection title={`SEAL ENCRYPTED DATA${sealData?.durationMs ? ` \u2014 ${sealData.durationMs}ms` : ""}`} visible={!!sealData}>
         {sealData?.encryptedHex && (
           <div
             className={cn(
@@ -115,11 +122,11 @@ export function OrderLogPanel({ stepData, settlementDigest }: OrderLogPanelProps
       </LogSection>
 
       <LogSection title="ON-CHAIN TX" visible={!!txData?.txDigest}>
-        {txData?.txDigest && <TxLink digest={txData.txDigest} />}
+        {txData?.txDigest && <TxRow label="transaction" digest={txData.txDigest} />}
       </LogSection>
 
       <LogSection title="SETTLEMENT TX" visible={!!settlementDigest}>
-        {settlementDigest && <TxLink digest={settlementDigest} />}
+        {settlementDigest && <TxRow label="settlement" digest={settlementDigest} />}
       </LogSection>
     </div>
   );

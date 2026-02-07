@@ -140,12 +140,21 @@ export function OrderConfirmationModal({
     if (!submittedOrder || !matches.data) return;
     if (phaseRef.current !== "monitoring" && phaseRef.current !== "complete") return;
 
-    const commitmentPrefix = submittedOrder.commitment.slice(0, 16) + "...";
+    // Normalize: strip 0x, lowercase for comparison
+    const rawCommitment = submittedOrder.commitment.replace(/^0x/i, "").toLowerCase();
+    const commitmentPrefix = rawCommitment.slice(0, 16);
 
     for (const match of matches.data) {
+      // Normalize backend prefixes the same way (strip 0x, lowercase, remove trailing "...")
+      const normalizePrefix = (p: string) =>
+        p.replace(/\.{3}$/, "").replace(/^0x/i, "").toLowerCase();
+
+      const prefixA = normalizePrefix(match.commitmentAPrefix);
+      const prefixB = normalizePrefix(match.commitmentBPrefix);
+
       const isMatch =
-        match.commitmentAPrefix === commitmentPrefix ||
-        match.commitmentBPrefix === commitmentPrefix;
+        prefixA === commitmentPrefix ||
+        prefixB === commitmentPrefix;
 
       if (!isMatch) continue;
 
