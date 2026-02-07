@@ -1,21 +1,11 @@
 'use client';
 
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 
 // All requests go through Next.js API routes (server-side proxy to matching engine)
 async function fetchApi(path: string) {
   const res = await fetch(`/api${path}`);
   if (!res.ok) throw new Error(`API ${path}: ${res.status}`);
-  return res.json();
-}
-
-async function postApi(path: string, body?: Record<string, unknown>) {
-  const res = await fetch(`/api${path}`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  if (!res.ok) throw new Error(`API POST ${path}: ${res.status}`);
   return res.json();
 }
 
@@ -83,6 +73,13 @@ export interface TeeAttestation {
   timestamp: number;
 }
 
+export interface LogEntry {
+  timestamp: number;
+  level: 'info' | 'warn' | 'error';
+  source: string;
+  message: string;
+}
+
 export function useBackend() {
   const status = useQuery<BackendStatus>({
     queryKey: ['backend-status'],
@@ -142,9 +139,14 @@ export function useBackend() {
     retry: 1,
   });
 
-  const flashLoanDemo = useMutation({
-    mutationFn: (params: { pool?: string; amount?: number }) =>
-      postApi('/flash-loan/demo', params),
+  const logs = useQuery<LogEntry[]>({
+    queryKey: ['engine-logs'],
+    queryFn: async () => {
+      const data = await fetchApi('/logs');
+      return data.logs || [];
+    },
+    refetchInterval: 3000,
+    retry: 1,
   });
 
   return {
@@ -155,6 +157,6 @@ export function useBackend() {
     teeAttestations,
     midPrice,
     batchStatus,
-    flashLoanDemo,
+    logs,
   };
 }
