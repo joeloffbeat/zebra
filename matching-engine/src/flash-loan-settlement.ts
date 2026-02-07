@@ -134,32 +134,39 @@ export class FlashLoanSettlementService {
       logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Order book unavailable, using mid-price ${midPrice} + minOut protection`);
     }
 
-    // Try batch PTB first (all sells in one transaction)
+    // Dry-run a test swap to verify pool has actual liquidity before executing
+    const testSui = Number(sells[0].decryptedLockedAmount) / 1e9;
+    const swapWorks = await this.dryRunSwap(testSui, midPrice);
+    if (!swapWorks) {
+      console.warn('FlashLoanSettlement: Dry-run swap produced 0 DBUSDC — pool has no bid-side liquidity despite mid-price');
+      logService.addLog('warn', 'flash-loan', 'FlashLoanSettlement: Dry-run confirmed no bid-side liquidity — orders will retry next batch');
+      return sells.map(s => ({
+        success: false,
+        commitment: s.commitment,
+        sellerAddress: s.owner,
+        amountSui: s.decryptedLockedAmount,
+        error: 'Pool has no bid-side liquidity (verified via dry-run)',
+      }));
+    }
+
+    // Execute batch PTB (all sells in one transaction)
     try {
       const result = await this.buildAndExecuteBatchPtb(sells, midPrice);
       if (result) return result;
     } catch (error) {
-      console.warn('FlashLoanSettlement: Batch PTB failed, falling back to per-order:', error);
-      logService.addLog('warn', 'flash-loan', `FlashLoanSettlement: Batch PTB failed, falling back to per-order: ${error}`);
+      console.warn('FlashLoanSettlement: Batch PTB failed:', error);
+      logService.addLog('warn', 'flash-loan', `FlashLoanSettlement: Batch PTB failed: ${error}`);
     }
 
-    // Fallback: settle each order individually
-    const results: FlashLoanSettlementResult[] = [];
-    for (const sell of sells) {
-      try {
-        const result = await this.buildAndExecuteSinglePtb(sell, midPrice);
-        results.push(result);
-      } catch (error: any) {
-        results.push({
-          success: false,
-          commitment: sell.commitment,
-          sellerAddress: sell.owner,
-          amountSui: sell.decryptedLockedAmount,
-          error: error.message || String(error),
-        });
-      }
-    }
-    return results;
+    // Don't fall back to per-order after an on-chain failure — the gas coin version
+    // has changed, causing stale object references. Orders will retry next batch.
+    return sells.map(s => ({
+      success: false,
+      commitment: s.commitment,
+      sellerAddress: s.owner,
+      amountSui: s.decryptedLockedAmount,
+      error: 'Batch settlement failed — will retry next batch',
+    }));
   }
 
   /**
@@ -364,6 +371,61 @@ export class FlashLoanSettlementService {
       sellerAddress: sell.owner,
       amountSui: sell.decryptedLockedAmount,
     };
+  }
+
+  /**
+   * Dry-run a swap to check if the pool actually fills orders.
+   * Uses devInspectTransactionBlock (no gas, no signing) to simulate.
+   */
+  private async dryRunSwap(amountInSui: number, midPrice: number): Promise<boolean> {
+    try {
+      const tx = new Transaction();
+      const teeAddress = this.keypair!.toSuiAddress();
+
+      // Build a simple swap (no flash loan, just swap)
+      const [remBase, usdcCoin, deepRefund] = this.dbClient.deepBook.swapExactBaseForQuote({
+        poolKey: 'SUI_DBUSDC',
+        amount: amountInSui,
+        deepAmount: DEEP_FEE_PER_SWAP,
+        minOut: 0, // Don't enforce minimum in dry-run — we want to see what we get
+      })(tx as any);
+
+      tx.transferObjects([remBase, usdcCoin, deepRefund], teeAddress);
+
+      const result = await this.suiClient.devInspectTransactionBlock({
+        sender: teeAddress,
+        transactionBlock: tx,
+      });
+
+      if (result.effects?.status?.status !== 'success') {
+        console.log(`FlashLoanSettlement: Dry-run swap failed: ${JSON.stringify(result.effects?.status)}`);
+        logService.addLog('warn', 'flash-loan', `Dry-run swap failed: ${JSON.stringify(result.effects?.status)}`);
+        return false;
+      }
+
+      // Check balance changes for DBUSDC output
+      const balanceChanges = (result as any).balanceChanges;
+      if (balanceChanges) {
+        const dbusdcChange = balanceChanges.find((c: any) =>
+          c.coinType?.includes('DBUSDC') && Number(c.amount) > 0
+        );
+        if (dbusdcChange) {
+          const dbusdcAmount = Number(dbusdcChange.amount) / DBUSDC_DECIMALS;
+          console.log(`FlashLoanSettlement: Dry-run swap would produce ${dbusdcAmount.toFixed(6)} DBUSDC`);
+          logService.addLog('info', 'flash-loan', `Dry-run swap would produce ${dbusdcAmount.toFixed(6)} DBUSDC`);
+          return dbusdcAmount > 0;
+        }
+      }
+
+      console.log('FlashLoanSettlement: Dry-run swap produced 0 DBUSDC (no bid liquidity)');
+      logService.addLog('warn', 'flash-loan', 'Dry-run swap produced 0 DBUSDC');
+      return false;
+    } catch (error) {
+      console.warn('FlashLoanSettlement: Dry-run swap error:', error);
+      logService.addLog('warn', 'flash-loan', `Dry-run swap error: ${error}`);
+      // If dry-run fails, still attempt the real transaction — let on-chain assertion handle it
+      return true;
+    }
   }
 
   private hexStringToBytes(hex: string): number[] {
