@@ -30,7 +30,7 @@ const STEPS = [
   { label: "ENCRYPT WITH SEAL", desc: "ORDER DATA ENCRYPTED FOR TEE ONLY" },
   { label: "SUBMIT ON-CHAIN", desc: "COMMITMENT HASH STORED ON SUI" },
   { label: "AWAIT MATCH", desc: "TEE FINDS MATCHING COUNTERPARTY" },
-  { label: "ATOMIC SETTLEMENT", desc: "TRADE EXECUTES VIA DEEPBOOK V3" },
+  { label: "ATOMIC SETTLEMENT", desc: "FUNDS TRANSFERRED FROM DARK POOL VAULT" },
 ];
 
 export function OrderConfirmationModal({
