@@ -1,30 +1,38 @@
 import { DeepBookClient } from '@mysten/deepbook-v3';
 import { SuiJsonRpcClient } from '@mysten/sui/jsonRpc';
+import { Transaction } from '@mysten/sui/transactions';
 import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
 import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
+import { bcs } from '@mysten/sui/bcs';
 import { config } from './config.js';
 import { logService } from './log-service.js';
 
+// DeepBook constants for mid-price calculation
+const FLOAT_SCALAR = 1_000_000_000;
+const SUI_SCALAR = 1_000_000_000;   // 9 decimals
+const DBUSDC_SCALAR = 1_000_000;     // 6 decimals
+
 export class DeepBookService {
   private dbClient: DeepBookClient;
+  private suiClient: SuiJsonRpcClient;
+  private address: string;
   private initialized = false;
 
   constructor() {
-    const suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
+    this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
 
-    let address = '0x0000000000000000000000000000000000000000000000000000000000000000';
+    this.address = '0x0000000000000000000000000000000000000000000000000000000000000000';
     if (config.suiPrivateKey) {
       try {
         const { secretKey } = decodeSuiPrivateKey(config.suiPrivateKey);
-        address = Ed25519Keypair.fromSecretKey(secretKey).toSuiAddress();
+        this.address = Ed25519Keypair.fromSecretKey(secretKey).toSuiAddress();
       } catch {}
     }
 
-    // Patch: DeepBook SDK's midPrice() creates transactions without a sender,
-    // but SuiJsonRpcClient.core.simulateTransaction() requires one.
-    // Inject the default sender before simulation to prevent "Missing transaction sender".
-    const originalSimulate = suiClient.core.simulateTransaction.bind(suiClient.core);
-    suiClient.core.simulateTransaction = async (options: any) => {
+    // Patch: DeepBook SDK's simulateTransaction needs a sender.
+    const address = this.address;
+    const originalSimulate = this.suiClient.core.simulateTransaction.bind(this.suiClient.core);
+    this.suiClient.core.simulateTransaction = async (options: any) => {
       if (options.transaction && typeof options.transaction.setSenderIfNotSet === 'function') {
         options.transaction.setSenderIfNotSet(address);
       }
@@ -32,9 +40,9 @@ export class DeepBookService {
     };
 
     this.dbClient = new DeepBookClient({
-      address,
+      address: this.address,
       network: 'testnet',
-      client: suiClient,
+      client: this.suiClient,
     });
 
     this.initialized = true;
@@ -43,21 +51,40 @@ export class DeepBookService {
   }
 
   async getMidPrice(poolKey: string = 'SUI_DBUSDC'): Promise<number | null> {
-    // Fallback price for demo when DeepBook pool is empty or unavailable
     const FALLBACK_SUI_PRICE = 3.50;
 
     try {
-      const midPrice = await this.dbClient.midPrice(poolKey);
-      console.log(`DeepBook mid-price for ${poolKey}: ${midPrice}`);
-      logService.addLog('info', 'deepbook', `DeepBook mid-price for ${poolKey}: ${midPrice}`);
+      // Build the same transaction the DeepBook SDK would build,
+      // but use devInspectTransactionBlock instead of simulateTransaction.
+      // The SDK's simulateTransaction path has a BCS serialization bug in
+      // TransactionDataBuilder.restore().build() that corrupts CallArg objects.
+      const tx = new Transaction();
+      this.dbClient.deepBook.midPrice(poolKey)(tx);
 
-      // Return fallback if DeepBook returns null (empty order book)
-      if (midPrice === null || midPrice === undefined) {
-        console.log(`Using fallback price: ${FALLBACK_SUI_PRICE}`);
-        logService.addLog('warn', 'deepbook', `Using fallback price: ${FALLBACK_SUI_PRICE}`);
+      const result = await this.suiClient.devInspectTransactionBlock({
+        sender: this.address,
+        transactionBlock: tx,
+      });
+
+      if (!result.results?.[0]?.returnValues?.[0]) {
+        console.log(`DeepBook mid-price returned no data, using fallback: ${FALLBACK_SUI_PRICE}`);
+        logService.addLog('warn', 'deepbook', `DeepBook mid-price returned no data, using fallback: ${FALLBACK_SUI_PRICE}`);
         return FALLBACK_SUI_PRICE;
       }
 
+      const [bytes] = result.results[0].returnValues[0];
+      const rawValue = bcs.U64.parse(new Uint8Array(bytes));
+      const adjustedMidPrice = Number(rawValue) * SUI_SCALAR / DBUSDC_SCALAR / FLOAT_SCALAR;
+      const midPrice = Number(adjustedMidPrice.toFixed(9));
+
+      if (midPrice === 0) {
+        console.log(`DeepBook mid-price is 0 (empty book), using fallback: ${FALLBACK_SUI_PRICE}`);
+        logService.addLog('warn', 'deepbook', `DeepBook mid-price is 0 (empty book), using fallback: ${FALLBACK_SUI_PRICE}`);
+        return FALLBACK_SUI_PRICE;
+      }
+
+      console.log(`DeepBook mid-price for ${poolKey}: ${midPrice}`);
+      logService.addLog('info', 'deepbook', `DeepBook mid-price for ${poolKey}: ${midPrice}`);
       return midPrice;
     } catch (error) {
       console.error(`Failed to get mid-price for ${poolKey}:`, error);
