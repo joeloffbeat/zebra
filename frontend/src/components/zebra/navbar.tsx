@@ -11,6 +11,7 @@ import { useWalletStore } from "@/lib/stores/wallet-store";
 const NAV_LINKS = [
   { href: "/trade", label: "TRADE" },
   { href: "/orders", label: "ORDERS" },
+  { href: "/flash-loan", label: "FLASH LOAN" },
   { href: "/tee", label: "TEE" },
 ];
 

@@ -1,7 +1,6 @@
 "use client";
 
-import { useState } from "react";
-import { Button, Input, Badge } from "@/components/ui";
+import { Badge } from "@/components/ui";
 import { Navbar, ZebraLoaderDots } from "@/components/zebra";
 import { useBackend } from "@/hooks/use-backend";
 
@@ -31,32 +30,13 @@ function truncate(hex: string, len = 14): string {
 }
 
 export default function TeePage() {
-  const { teeMetrics, teeAttestations, flashLoanDemo } = useBackend();
-  const [flashLoanAmount, setFlashLoanAmount] = useState("1000000000");
-  const [flashLoanResult, setFlashLoanResult] = useState<string | null>(null);
+  const { teeMetrics, teeAttestations } = useBackend();
 
   const metrics = teeMetrics.data;
   const attestations = teeAttestations.data || [];
 
   const isLoading = teeMetrics.isLoading;
   const isError = teeMetrics.isError;
-
-  const handleFlashLoan = async () => {
-    setFlashLoanResult(null);
-    try {
-      const result = await flashLoanDemo.mutateAsync({
-        amount: parseInt(flashLoanAmount),
-      });
-      setFlashLoanResult(
-        result.success
-          ? `SUCCESS \u2014 TX: ${result.digest?.slice(0, 16)}...`
-          : `RESULT: ${result.error || result.message || "UNKNOWN"}`
-      );
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "FLASH LOAN FAILED";
-      setFlashLoanResult(`ERROR: ${message}`);
-    }
-  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -66,7 +46,7 @@ export default function TeePage() {
         <div className="mb-8">
           <h1 className="text-lg tracking-widest mb-2">TEE DASHBOARD</h1>
           <p className="text-xs tracking-wide text-muted-foreground">
-            TRUSTED EXECUTION ENVIRONMENT \u2014 MATCHING ENGINE STATUS
+            TRUSTED EXECUTION ENVIRONMENT {"\u2014"} MATCHING ENGINE STATUS
           </p>
         </div>
 
@@ -263,48 +243,6 @@ export default function TeePage() {
                       </div>
                     </div>
                   ))
-                )}
-              </div>
-            </div>
-
-            {/* FLASH LOAN DEMO */}
-            <div className="border border-border">
-              <div className="p-4 border-b border-border">
-                <span className="text-xs tracking-widest text-muted-foreground">
-                  FLASH LOAN DEMO
-                </span>
-              </div>
-              <div className="p-6 space-y-4">
-                <p className="text-[10px] tracking-wide text-muted-foreground">
-                  TRIGGER A DEEPBOOK V3 FLASH LOAN VIA THE TEE BACKEND.
-                  THIS IS A DEMO \u2014 KNOWN TESTNET LIMITATIONS MAY APPLY.
-                </p>
-                <div className="flex items-center gap-4">
-                  <div className="flex-1">
-                    <Input
-                      type="number"
-                      placeholder="AMOUNT IN MIST"
-                      value={flashLoanAmount}
-                      onChange={(e) => setFlashLoanAmount(e.target.value)}
-                    />
-                  </div>
-                  <Button
-                    onClick={handleFlashLoan}
-                    disabled={flashLoanDemo.isPending}
-                  >
-                    {flashLoanDemo.isPending ? (
-                      <span className="flex items-center gap-2">
-                        EXECUTING <ZebraLoaderDots />
-                      </span>
-                    ) : (
-                      "EXECUTE FLASH LOAN"
-                    )}
-                  </Button>
-                </div>
-                {flashLoanResult && (
-                  <div className="border border-border p-3 text-[10px] font-mono tracking-wide">
-                    {flashLoanResult}
-                  </div>
                 )}
               </div>
             </div>
