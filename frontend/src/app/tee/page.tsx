@@ -125,7 +125,7 @@ export default function TeePage() {
                     PUBLIC KEY
                   </span>
                   <p className="font-mono text-[10px] mt-1 break-all">
-                    {metrics?.publicKey ? truncate(metrics.publicKey, 40) : "\u2014"}
+                    {metrics?.publicKey || "\u2014"}
                   </p>
                 </div>
                 <div>
@@ -133,9 +133,7 @@ export default function TeePage() {
                     MATCHER ADDRESS
                   </span>
                   <p className="font-mono text-[10px] mt-1 break-all">
-                    {metrics?.matcherAddress
-                      ? truncate(metrics.matcherAddress, 20)
-                      : "\u2014"}
+                    {metrics?.matcherAddress || "\u2014"}
                   </p>
                 </div>
               </div>
