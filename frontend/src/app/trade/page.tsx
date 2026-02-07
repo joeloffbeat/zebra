@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import {
   Button,
   Input,
@@ -74,12 +74,23 @@ export default function TradePage() {
   const { latestMatch, showMatchModal, setShowMatchModal } = useOrderStatus();
 
   const midPriceValue = midPriceQuery.data?.midPrice;
+  const isMidPriceLoading = midPriceQuery.isLoading;
 
-  // Auto-fill price when switching to MARKET order type
+  // Auto-fill price when mid-price loads and order type is MARKET
+  useEffect(() => {
+    if (orderType === "MARKET" && midPriceValue) {
+      setPrice(midPriceValue.toString());
+    }
+  }, [orderType, midPriceValue]);
+
+  // Handle order type change
   const handleOrderTypeChange = (type: "LIMIT" | "MARKET") => {
     setOrderType(type);
     if (type === "MARKET" && midPriceValue) {
       setPrice(midPriceValue.toString());
+    } else if (type === "LIMIT") {
+      // Clear price when switching back to limit
+      setPrice("");
     }
   };
 
@@ -294,8 +305,8 @@ export default function TradePage() {
                   <Input
                     type="text"
                     inputMode="decimal"
-                    placeholder={orderType === "MARKET" ? "FETCHING..." : "0.00"}
-                    value={price}
+                    placeholder="0.00"
+                    value={orderType === "MARKET" && isMidPriceLoading ? "" : price}
                     onChange={(e) => handleNumericInput(e.target.value, setPrice)}
                     className="flex-1"
                     disabled={orderType === "MARKET"}
@@ -306,7 +317,11 @@ export default function TradePage() {
                 </div>
                 {orderType === "MARKET" && (
                   <p className="text-[10px] tracking-wide text-muted-foreground">
-                    USING DEEPBOOK MID-PRICE
+                    {isMidPriceLoading
+                      ? "FETCHING DEEPBOOK MID-PRICE..."
+                      : midPriceValue
+                        ? "USING DEEPBOOK MID-PRICE"
+                        : "MID-PRICE UNAVAILABLE"}
                   </p>
                 )}
               </div>

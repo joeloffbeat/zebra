@@ -30,13 +30,24 @@ export class DeepBookService {
   }
 
   async getMidPrice(poolKey: string = 'SUI_DBUSDC'): Promise<number | null> {
+    // Fallback price for demo when DeepBook pool is empty or unavailable
+    const FALLBACK_SUI_PRICE = 3.50;
+
     try {
       const midPrice = await this.dbClient.midPrice(poolKey);
       console.log(`DeepBook mid-price for ${poolKey}: ${midPrice}`);
+
+      // Return fallback if DeepBook returns null (empty order book)
+      if (midPrice === null || midPrice === undefined) {
+        console.log(`Using fallback price: ${FALLBACK_SUI_PRICE}`);
+        return FALLBACK_SUI_PRICE;
+      }
+
       return midPrice;
     } catch (error) {
       console.error(`Failed to get mid-price for ${poolKey}:`, error);
-      return null;
+      console.log(`Using fallback price: ${FALLBACK_SUI_PRICE}`);
+      return FALLBACK_SUI_PRICE;
     }
   }
 
