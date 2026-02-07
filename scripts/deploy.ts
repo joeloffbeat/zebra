@@ -129,11 +129,13 @@ async function createPool(
 
   const poolId = Array.from(new TextEncoder().encode('ZEBRA_POOL_1'));
 
-  // Single type argument: CoinType = SUI
+  // Dual type arguments: BaseCoin = SUI, QuoteCoin = DBUSDC
+  const DBUSDC_TYPE = '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC';
   const [adminCap, matcherCap] = tx.moveCall({
     target: `${packageId}::dark_pool::create_pool`,
     typeArguments: [
       '0x2::sui::SUI',
+      DBUSDC_TYPE,
     ],
     arguments: [
       tx.pure(bcs.vector(bcs.u8()).serialize(vkBytes)),           // vk_bytes
