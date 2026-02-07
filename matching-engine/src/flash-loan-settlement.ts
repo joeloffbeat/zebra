@@ -14,6 +14,10 @@ import { DeepBookService } from './deepbook-service.js';
 const MAX_SLIPPAGE = 0.10;
 // DBUSDC has 6 decimals
 const DBUSDC_DECIMALS = 1_000_000;
+// DEEP tokens required to pay DeepBook taker fees.
+// Overestimate is safe — unused DEEP is refunded in the deepCoinResult.
+// Typical taker fee is ~0.1% of trade value paid in DEEP.
+const DEEP_FEE_PER_SWAP = 2; // 2 DEEP per swap (generous overestimate)
 
 export interface FlashLoanSettlementResult {
   success: boolean;
@@ -188,7 +192,7 @@ export class FlashLoanSettlementService {
         poolKey: 'SUI_DBUSDC',
         amount: amountInSui,
         baseCoin: borrowedSui,
-        deepAmount: 0,
+        deepAmount: DEEP_FEE_PER_SWAP,
         minOut: minDbusdc,
       })(tx as any);
 
@@ -286,7 +290,7 @@ export class FlashLoanSettlementService {
       poolKey: 'SUI_DBUSDC',
       amount: amountInSui,
       baseCoin: borrowedSui,
-      deepAmount: 0,
+      deepAmount: DEEP_FEE_PER_SWAP,
       minOut: minDbusdc,
     })(tx as any);
 
