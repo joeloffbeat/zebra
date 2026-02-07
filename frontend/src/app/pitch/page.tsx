@@ -281,7 +281,7 @@ export default function PitchPage() {
                     ORDER BOOK EXPOSURE
                   </h3>
                   <p className="text-[14px] tracking-wide opacity-50 leading-relaxed">
-                    <EDesc text="YOUR LIMIT PRICE, ORDER SIZE, AND WALLET ADDRESS ARE VISIBLE TO EVERYONE ON THE NETWORK. MEV BOTS EXPLOIT THIS IN REAL-TIME." />
+                    <EDesc text="YOUR LIMIT PRICE, ORDER SIZE, AND WALLET ADDRESS ARE VISIBLE TO EVERYONE. ANYONE CAN QUERY DEEPBOOK AND SEE EXACTLY WHAT YOU'RE DOING." />
                   </p>
                 </div>
               </FadeIn>
