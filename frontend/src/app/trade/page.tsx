@@ -74,7 +74,7 @@ export default function TradePage() {
   const { latestMatch, showMatchModal, setShowMatchModal } = useOrderStatus();
 
   const midPriceValue = midPriceQuery.data?.midPrice;
-  const isMidPriceLoading = midPriceQuery.isLoading;
+  const isMidPriceLoading = midPriceQuery.isLoading || midPriceQuery.isFetching;
 
   // Auto-fill price when mid-price loads and order type is MARKET
   useEffect(() => {
@@ -319,8 +319,8 @@ export default function TradePage() {
                   <p className="text-[10px] tracking-wide text-muted-foreground">
                     {isMidPriceLoading
                       ? "FETCHING DEEPBOOK MID-PRICE..."
-                      : midPriceValue
-                        ? "USING DEEPBOOK MID-PRICE"
+                      : midPriceValue !== null && midPriceValue !== undefined
+                        ? `USING DEEPBOOK MID-PRICE ($${midPriceValue})`
                         : "MID-PRICE UNAVAILABLE"}
                   </p>
                 )}

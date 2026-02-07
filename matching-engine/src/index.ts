@@ -1,4 +1,5 @@
 import express from 'express';
+import cors from 'cors';
 import { config } from './config.js';
 import { SuiEventListener, CommittedOrder } from './sui-listener.js';
 import { OrderBook, DecryptedOrderInfo } from './order-book.js';
@@ -10,6 +11,7 @@ import { TeeAttestationService } from './tee-attestation.js';
 import { FlashLoanService } from './flash-loan-service.js';
 
 const app = express();
+app.use(cors());
 app.use(express.json());
 
 // Initialize components
