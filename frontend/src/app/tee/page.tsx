@@ -29,11 +29,27 @@ function truncate(hex: string, len = 14): string {
   return hex.slice(0, len) + "...";
 }
 
+function formatTimestamp(ts: number): string {
+  return new Date(ts).toLocaleTimeString("en-US", {
+    hour12: false,
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+}
+
+const LEVEL_COLORS: Record<string, string> = {
+  info: "text-green-400",
+  warn: "text-yellow-400",
+  error: "text-red-400",
+};
+
 export default function TeePage() {
-  const { teeMetrics, teeAttestations } = useBackend();
+  const { teeMetrics, teeAttestations, logs } = useBackend();
 
   const metrics = teeMetrics.data;
   const attestations = teeAttestations.data || [];
+  const logEntries = logs.data || [];
 
   const isLoading = teeMetrics.isLoading;
   const isError = teeMetrics.isError;
@@ -241,6 +257,41 @@ export default function TeePage() {
                           {timeAgo(att.timestamp)}
                         </span>
                       </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+
+            {/* ENGINE LOGS */}
+            <div className="border border-border">
+              <div className="p-4 border-b border-border">
+                <span className="text-xs tracking-widest text-muted-foreground">
+                  ENGINE LOGS ({logEntries.length})
+                </span>
+              </div>
+              <div className="max-h-96 overflow-y-auto bg-black/80 p-4 font-mono text-[10px] leading-relaxed">
+                {logEntries.length === 0 ? (
+                  <p className="text-xs tracking-widest text-muted-foreground text-center py-4">
+                    NO LOGS YET
+                  </p>
+                ) : (
+                  [...logEntries].reverse().map((entry, i) => (
+                    <div key={i} className="flex gap-3 py-0.5">
+                      <span className="text-muted-foreground shrink-0">
+                        {formatTimestamp(entry.timestamp)}
+                      </span>
+                      <span
+                        className={`shrink-0 uppercase ${LEVEL_COLORS[entry.level] || "text-muted-foreground"}`}
+                      >
+                        [{entry.level}]
+                      </span>
+                      <span className="text-blue-400 shrink-0">
+                        [{entry.source}]
+                      </span>
+                      <span className="text-gray-300 break-all">
+                        {entry.message}
+                      </span>
                     </div>
                   ))
                 )}
