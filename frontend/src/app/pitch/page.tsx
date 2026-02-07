@@ -752,38 +752,35 @@ export default function PitchPage() {
 
                   {/* Branching arrows */}
                   <div className="flex flex-col items-start mx-6 shrink-0">
-                    {/* Top branch line */}
-                    <div className="flex items-center">
-                      <div className="w-12 h-px bg-current/30" />
-                      <div className="w-3 h-3 border-t border-r border-current/30 -rotate-45 -ml-2" />
-                    </div>
-                    {/* Vertical connector */}
-                    <div className="w-px h-6 bg-current/30 ml-0" />
-                    {/* Bottom branch line */}
-                    <div className="flex items-center">
-                      <div className="w-12 h-px bg-current/30" />
-                      <div className="w-3 h-3 border-t border-r border-current/30 -rotate-45 -ml-2" />
-                    </div>
+                    {[0, 1, 2, 3, 4].map((i) => (
+                      <div key={i}>
+                        <div className="flex items-center">
+                          <div className="w-10 h-px bg-current/30" />
+                          <div className="w-2.5 h-2.5 border-t border-r border-current/30 -rotate-45 -ml-1.5" />
+                        </div>
+                        {i < 4 && <div className="w-px h-3 bg-current/30 ml-0" />}
+                      </div>
+                    ))}
                   </div>
 
                   {/* Receivers */}
-                  <div className="flex flex-col gap-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-[15px] tracking-wide border border-current/30 px-4 py-2">
-                        <ESub text="0xBBB" />
-                      </span>
-                      <span className="text-[14px] opacity-50">
-                        <ESub text="60%" />
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className="text-[15px] tracking-wide border border-current/30 px-4 py-2">
-                        <ESub text="0xCCC" />
-                      </span>
-                      <span className="text-[14px] opacity-50">
-                        <ESub text="40%" />
-                      </span>
-                    </div>
+                  <div className="flex flex-col gap-2">
+                    {[
+                      { addr: "0xB1F", pct: "30%" },
+                      { addr: "0xC7A", pct: "25%" },
+                      { addr: "0xD3E", pct: "20%" },
+                      { addr: "0xE9C", pct: "15%" },
+                      { addr: "0xF2D", pct: "10%" },
+                    ].map((r) => (
+                      <div key={r.addr} className="flex items-center gap-3">
+                        <span className="text-[14px] tracking-wide border border-current/30 px-3 py-1">
+                          <ESub text={r.addr} />
+                        </span>
+                        <span className="text-[13px] opacity-50">
+                          <ESub text={r.pct} />
+                        </span>
+                      </div>
+                    ))}
                   </div>
                 </div>
                 <div className="text-center mt-6">
