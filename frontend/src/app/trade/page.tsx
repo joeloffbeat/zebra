@@ -60,6 +60,7 @@ export default function TradePage() {
   const [side, setSide] = useState<"BUY" | "SELL">("BUY");
   const [amount, setAmount] = useState("");
   const [price, setPrice] = useState("");
+  const [orderType, setOrderType] = useState<"LIMIT" | "MARKET">("LIMIT");
   const [expiry, setExpiry] = useState("24h");
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [isProving, setIsProving] = useState(false);
@@ -73,6 +74,25 @@ export default function TradePage() {
   const { latestMatch, showMatchModal, setShowMatchModal } = useOrderStatus();
 
   const midPriceValue = midPriceQuery.data?.midPrice;
+
+  // Auto-fill price when switching to MARKET order type
+  const handleOrderTypeChange = (type: "LIMIT" | "MARKET") => {
+    setOrderType(type);
+    if (type === "MARKET" && midPriceValue) {
+      setPrice(midPriceValue.toString());
+    }
+  };
+
+  // Helper to validate and set numeric input (decimals only)
+  const handleNumericInput = (
+    value: string,
+    setter: (val: string) => void
+  ) => {
+    // Allow empty, or valid decimal numbers
+    if (value === "" || /^\d*\.?\d*$/.test(value)) {
+      setter(value);
+    }
+  };
 
   const activeOrders = orders.filter(
     (o) => o.status === "pending" || o.status === "matched"
@@ -224,18 +244,40 @@ export default function TradePage() {
                 </div>
               </div>
 
+              {/* ORDER TYPE */}
+              <div className="space-y-2">
+                <Label>ORDER TYPE</Label>
+                <div className="flex gap-4">
+                  <button
+                    onClick={() => handleOrderTypeChange("LIMIT")}
+                    className={`text-xs tracking-widest transition-opacity ${
+                      orderType === "LIMIT" ? "opacity-100" : "opacity-40"
+                    }`}
+                  >
+                    [LIMIT]
+                  </button>
+                  <button
+                    onClick={() => handleOrderTypeChange("MARKET")}
+                    className={`text-xs tracking-widest transition-opacity ${
+                      orderType === "MARKET" ? "opacity-100" : "opacity-40"
+                    }`}
+                  >
+                    [MARKET]
+                  </button>
+                </div>
+              </div>
+
               {/* AMOUNT */}
               <div className="space-y-2">
                 <Label>AMOUNT (SUI)</Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    type="number"
+                    type="text"
+                    inputMode="decimal"
                     placeholder="0.00"
                     value={amount}
-                    onChange={(e) => setAmount(e.target.value)}
+                    onChange={(e) => handleNumericInput(e.target.value, setAmount)}
                     className="flex-1"
-                    min="0"
-                    step="0.01"
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
                     SUI
@@ -245,21 +287,28 @@ export default function TradePage() {
 
               {/* PRICE */}
               <div className="space-y-2">
-                <Label>LIMIT PRICE (USD)</Label>
+                <Label>
+                  {orderType === "MARKET" ? "MARKET PRICE (USD)" : "LIMIT PRICE (USD)"}
+                </Label>
                 <div className="flex items-center gap-2">
                   <Input
-                    type="number"
-                    placeholder="0.00"
+                    type="text"
+                    inputMode="decimal"
+                    placeholder={orderType === "MARKET" ? "FETCHING..." : "0.00"}
                     value={price}
-                    onChange={(e) => setPrice(e.target.value)}
+                    onChange={(e) => handleNumericInput(e.target.value, setPrice)}
                     className="flex-1"
-                    min="0"
-                    step="0.01"
+                    disabled={orderType === "MARKET"}
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
                     USD
                   </span>
                 </div>
+                {orderType === "MARKET" && (
+                  <p className="text-[10px] tracking-wide text-muted-foreground">
+                    USING DEEPBOOK MID-PRICE
+                  </p>
+                )}
               </div>
 
               {/* EXPIRY */}
