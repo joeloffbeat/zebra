@@ -26,7 +26,7 @@ const matcher = new OrderMatcher(orderBook, deepBookService);
 const settlement = new SettlementService();
 const teeService = new TeeAttestationService(config.enclaveKeyPath, config.teeMode);
 const flashLoanService = new FlashLoanService();
-const flashLoanSettlement = new FlashLoanSettlementService();
+const flashLoanSettlement = new FlashLoanSettlementService(deepBookService);
 
 // Wire TEE service into settlement
 settlement.setTeeService(teeService);

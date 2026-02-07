@@ -8,6 +8,10 @@ import { config } from './config.js';
 import { logService } from './log-service.js';
 import { DecryptedOrderInfo } from './order-book.js';
 import { Receiver, resolveReceivers } from './receiver-utils.js';
+import { DeepBookService } from './deepbook-service.js';
+
+// Maximum acceptable slippage for DeepBook swaps (10%)
+const MAX_SLIPPAGE = 0.10;
 
 export interface FlashLoanSettlementResult {
   success: boolean;
@@ -22,8 +26,10 @@ export class FlashLoanSettlementService {
   private dbClient: DeepBookClient;
   private suiClient: SuiJsonRpcClient;
   private keypair: Ed25519Keypair | null = null;
+  private deepBookService: DeepBookService;
 
-  constructor() {
+  constructor(deepBookService: DeepBookService) {
+    this.deepBookService = deepBookService;
     this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'testnet' });
 
     if (config.suiPrivateKey) {
@@ -66,9 +72,26 @@ export class FlashLoanSettlementService {
       }));
     }
 
+    // Fetch mid-price for minOut calculation
+    const midPrice = await this.deepBookService.getMidPrice('SUI_DBUSDC');
+    if (!midPrice || midPrice <= 0) {
+      console.warn('FlashLoanSettlement: No mid-price available, skipping settlement to protect sellers');
+      logService.addLog('warn', 'flash-loan', 'FlashLoanSettlement: No mid-price available, skipping settlement to protect sellers');
+      return sells.map(s => ({
+        success: false,
+        commitment: s.commitment,
+        sellerAddress: s.owner,
+        amountSui: s.decryptedLockedAmount,
+        error: 'No mid-price available for slippage protection',
+      }));
+    }
+
+    console.log(`FlashLoanSettlement: Using mid-price ${midPrice} with ${MAX_SLIPPAGE * 100}% max slippage`);
+    logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Using mid-price ${midPrice} with ${MAX_SLIPPAGE * 100}% max slippage`);
+
     // Try batch PTB first (all sells in one transaction)
     try {
-      const result = await this.buildAndExecuteBatchPtb(sells);
+      const result = await this.buildAndExecuteBatchPtb(sells, midPrice);
       if (result) return result;
     } catch (error) {
       console.warn('FlashLoanSettlement: Batch PTB failed, falling back to per-order:', error);
@@ -79,7 +102,7 @@ export class FlashLoanSettlementService {
     const results: FlashLoanSettlementResult[] = [];
     for (const sell of sells) {
       try {
-        const result = await this.buildAndExecuteSinglePtb(sell);
+        const result = await this.buildAndExecuteSinglePtb(sell, midPrice);
         results.push(result);
       } catch (error: any) {
         results.push({
@@ -98,7 +121,7 @@ export class FlashLoanSettlementService {
    * Build a batch PTB with sequential flash loan cycles for all sells.
    * Each cycle: borrow SUI -> swap SUI->USDC -> extract from vault -> repay -> transfer USDC
    */
-  private async buildAndExecuteBatchPtb(sells: DecryptedOrderInfo[]): Promise<FlashLoanSettlementResult[] | null> {
+  private async buildAndExecuteBatchPtb(sells: DecryptedOrderInfo[], midPrice: number): Promise<FlashLoanSettlementResult[] | null> {
     const tx = new Transaction();
     tx.setGasBudget(50_000_000);
     const teeAddress = this.keypair!.toSuiAddress();
@@ -114,13 +137,18 @@ export class FlashLoanSettlementService {
         amountInSui,
       )(tx as any);
 
-      // 2. Swap SUI -> USDC on DeepBook
+      // 2. Swap SUI -> USDC on DeepBook (with slippage protection)
+      const expectedDbusdc = amountInSui * midPrice;
+      const minDbusdc = expectedDbusdc * (1 - MAX_SLIPPAGE);
+      console.log(`FlashLoanSettlement: Swap ${amountInSui} SUI → min ${minDbusdc.toFixed(6)} DBUSDC (expected ${expectedDbusdc.toFixed(6)})`);
+      logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Swap ${amountInSui} SUI → min ${minDbusdc.toFixed(6)} DBUSDC`);
+
       const [remBase, usdcCoin, deepRefund] = this.dbClient.deepBook.swapExactBaseForQuote({
         poolKey: 'SUI_DBUSDC',
         amount: amountInSui,
         baseCoin: borrowedSui,
         deepAmount: 0,
-        minOut: 0,
+        minOut: minDbusdc,
       })(tx as any);
 
       // 3. Extract seller's SUI from dark pool vault via settle_single_base
@@ -190,7 +218,7 @@ export class FlashLoanSettlementService {
   /**
    * Build and execute a single flash loan PTB for one sell order.
    */
-  private async buildAndExecuteSinglePtb(sell: DecryptedOrderInfo): Promise<FlashLoanSettlementResult> {
+  private async buildAndExecuteSinglePtb(sell: DecryptedOrderInfo, midPrice: number): Promise<FlashLoanSettlementResult> {
     const tx = new Transaction();
     tx.setGasBudget(20_000_000);
     const teeAddress = this.keypair!.toSuiAddress();
@@ -203,13 +231,16 @@ export class FlashLoanSettlementService {
       amountInSui,
     )(tx as any);
 
-    // 2. Swap SUI -> USDC
+    // 2. Swap SUI -> USDC (with slippage protection)
+    const expectedDbusdc = amountInSui * midPrice;
+    const minDbusdc = expectedDbusdc * (1 - MAX_SLIPPAGE);
+
     const [remBase, usdcCoin, deepRefund] = this.dbClient.deepBook.swapExactBaseForQuote({
       poolKey: 'SUI_DBUSDC',
       amount: amountInSui,
       baseCoin: borrowedSui,
       deepAmount: 0,
-      minOut: 0,
+      minOut: minDbusdc,
     })(tx as any);
 
     // 3. Extract from vault
