@@ -104,8 +104,7 @@ export function OrderLogPanel({ stepData, settlementDigest }: OrderLogPanelProps
               "break-all"
             )}
           >
-            0x{sealData.encryptedHex.slice(0, 200)}
-            {sealData.encryptedHex.length > 200 && "..."}
+            0x{sealData.encryptedHex}
           </div>
         )}
         {sealData?.byteLength && (
