@@ -97,6 +97,44 @@ export class OrderMatcher {
     }
   }
 
+  /**
+   * Record a flash loan settlement as a pseudo-match so it appears in /matches.
+   * Uses "deepbook:..." sentinel for commitmentB to distinguish from internal matches.
+   */
+  recordFlashLoanSettlement(
+    sell: { commitment: string; owner: string },
+    txDigest: string,
+  ) {
+    const pseudoMatch: Match = {
+      buyer: {
+        commitment: sell.commitment,
+        owner: sell.owner,
+        timestamp: Date.now(),
+        encryptedData: '',
+        decryptedPrice: 0n,
+        decryptedAmount: 0n,
+        decryptedSide: 0,
+        decryptedLockedAmount: 0n,
+      } as any,
+      seller: {
+        commitment: `deepbook:${sell.commitment.slice(0, 32)}`,
+        owner: sell.owner,
+        timestamp: Date.now(),
+        encryptedData: '',
+        decryptedPrice: 0n,
+        decryptedAmount: 0n,
+        decryptedSide: 0,
+        decryptedLockedAmount: 0n,
+      } as any,
+      executionPrice: 0n,
+      executionAmount: 0n,
+      deepBookRefPrice: null,
+      timestamp: Date.now(),
+      settlementDigest: txDigest,
+    };
+    this.matches.push(pseudoMatch);
+  }
+
   getMatches(): Match[] {
     return this.matches;
   }
