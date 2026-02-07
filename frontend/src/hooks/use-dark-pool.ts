@@ -1,6 +1,7 @@
 'use client';
 
 import { useSignTransaction, useSuiClient } from '@mysten/dapp-kit';
+import { Transaction } from '@mysten/sui/transactions';
 import { useCallback, useState } from 'react';
 import { useOrderStore } from '@/lib/stores/order-store';
 import { submitHiddenOrder, cancelOrder } from '@/lib/sui/dark-pool';
@@ -14,7 +15,7 @@ export function useDarkPool() {
   const [error, setError] = useState<string | null>(null);
 
   // Wrapper that signs and then executes via SuiClient
-  const signAndExecute = useCallback(async ({ transaction }: { transaction: unknown }) => {
+  const signAndExecute = useCallback(async ({ transaction }: { transaction: Transaction }) => {
     // Sign the transaction
     const { signature, bytes } = await signTransaction({ transaction });
 
