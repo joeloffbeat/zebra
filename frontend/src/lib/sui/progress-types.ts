@@ -13,5 +13,6 @@ export interface StepState {
 export type ProgressCallback = (
   stepId: OrderStepId | CancelStepId,
   status: StepStatus,
-  errorMessage?: string
+  errorMessage?: string,
+  data?: Record<string, string>
 ) => void;

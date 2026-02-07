@@ -40,7 +40,11 @@ export async function submitHiddenOrder(
     poolId,
   });
   console.log('[ZEBRA] ZK proof generated:', proofResult.commitment.slice(0, 20) + '...');
-  onProgress?.("zk-proof", "complete");
+  onProgress?.("zk-proof", "complete", undefined, {
+    proof: JSON.stringify(proofResult.proof),
+    commitment: proofResult.commitment,
+    nullifier: proofResult.nullifier,
+  });
 
   const proofBytes = proofToSuiFormat(proofResult.proof);
   const publicInputBytes = publicSignalsToSuiFormat(proofResult.publicSignals);
@@ -59,8 +63,12 @@ export async function submitHiddenOrder(
     SEAL_ALLOWLIST_ID,
   );
   const encryptedData = new Uint8Array(encryptedBytes);
+  const encryptedHex = Array.from(encryptedData).map(b => b.toString(16).padStart(2, '0')).join('');
   console.log('[ZEBRA] Order encrypted, building transaction...');
-  onProgress?.("seal-encrypt", "complete");
+  onProgress?.("seal-encrypt", "complete", undefined, {
+    encryptedHex,
+    byteLength: String(encryptedData.length),
+  });
 
   onProgress?.("submit-tx", "active");
 
@@ -144,7 +152,9 @@ export async function submitHiddenOrder(
       transaction: tx,
     });
     console.log('[ZEBRA] Transaction submitted:', result.digest);
-    onProgress?.("submit-tx", "complete");
+    onProgress?.("submit-tx", "complete", undefined, {
+      txDigest: result.digest,
+    });
   } catch (signError) {
     console.error('[ZEBRA] Sign/execute failed:', signError);
     const message = signError instanceof Error ? signError.message : 'Transaction failed';

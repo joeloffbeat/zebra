@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import Image from "next/image";
 import {
   Dialog,
@@ -11,7 +11,9 @@ import {
   DialogTitle,
   Button,
 } from "@/components/ui";
-import { TransactionStepIndicator } from "@/components/zebra";
+import { TransactionStepIndicator, OrderLogPanel } from "@/components/zebra";
+import { cn } from "@/lib/utils";
+import { useBackend } from "@/hooks/use-backend";
 import type { StepState, ProgressCallback, OrderStepId } from "@/lib/sui/progress-types";
 import type { HiddenOrder } from "@/lib/sui/types";
 
@@ -30,7 +32,7 @@ interface OrderConfirmationModalProps {
   onConfirm: (onProgress: ProgressCallback) => Promise<HiddenOrder | null>;
 }
 
-type Phase = "confirm" | "processing" | "complete" | "error";
+type Phase = "confirm" | "processing" | "monitoring" | "complete" | "error";
 
 const INITIAL_STEPS: StepState[] = [
   { id: "zk-proof", label: "GENERATE ZK PROOF", desc: "PROVE ORDER VALIDITY WITHOUT REVEALING DETAILS", status: "pending" },
@@ -48,6 +50,12 @@ export function OrderConfirmationModal({
 }: OrderConfirmationModalProps) {
   const [phase, setPhase] = useState<Phase>("confirm");
   const [steps, setSteps] = useState<StepState[]>(INITIAL_STEPS);
+  const [stepData, setStepData] = useState<Record<string, Record<string, string>>>({});
+  const [submittedOrder, setSubmittedOrder] = useState<HiddenOrder | null>(null);
+  const [settlementDigest, setSettlementDigest] = useState<string | null>(null);
+  const phaseRef = useRef<Phase>("confirm");
+
+  const { batchStatus, matches } = useBackend();
 
   const isBuy = order.side === "BUY";
   const fromAsset = isBuy ? "DBUSDC" : "SUI";
@@ -55,9 +63,15 @@ export function OrderConfirmationModal({
   const fromAmount = isBuy ? order.total.replace(" DBUSDC", "") : order.amount;
   const toAmount = isBuy ? order.amount : order.total.replace(" DBUSDC", "");
 
+  const isExpanded = phase !== "confirm";
+
   const resetState = useCallback(() => {
     setPhase("confirm");
+    phaseRef.current = "confirm";
     setSteps(INITIAL_STEPS.map(s => ({ ...s, status: "pending" as const })));
+    setStepData({});
+    setSubmittedOrder(null);
+    setSettlementDigest(null);
   }, []);
 
   const handleOpenChange = useCallback((newOpen: boolean) => {
@@ -66,52 +80,115 @@ export function OrderConfirmationModal({
     onOpenChange(newOpen);
   }, [phase, resetState, onOpenChange]);
 
-  const handleProgress: ProgressCallback = useCallback((stepId, status, errorMessage) => {
+  const handleProgress: ProgressCallback = useCallback((stepId, status, errorMessage, data) => {
     setSteps(prev => prev.map(step =>
       step.id === stepId
         ? { ...step, status, errorMessage }
         : step
     ));
 
+    if (data) {
+      setStepData(prev => ({ ...prev, [stepId]: data }));
+    }
+
     if (status === "error") {
       setPhase("error");
+      phaseRef.current = "error";
     }
   }, []);
 
   const runOrder = useCallback(async () => {
     setPhase("processing");
+    phaseRef.current = "processing";
     setSteps(INITIAL_STEPS.map(s => ({ ...s, status: "pending" as const })));
+    setStepData({});
+    setSubmittedOrder(null);
+    setSettlementDigest(null);
 
     try {
       const result = await onConfirm(handleProgress);
       if (result) {
-        // Mark monitoring steps as pending (no pulse) with MONITORING label
+        setSubmittedOrder(result);
         setSteps(prev => prev.map(step => {
-          if (step.id === "await-match" || step.id === "settlement") {
-            return { ...step, status: "pending" as const, desc: "MONITORING" };
+          if (step.id === "await-match") {
+            return { ...step, status: "active" as const, desc: "WAITING FOR BATCH RESOLUTION" };
           }
           return step;
         }));
-        setPhase("complete");
-      } else {
+        setPhase("monitoring");
+        phaseRef.current = "monitoring";
+      } else if (phaseRef.current === "processing") {
         // null result without thrown error — treat as error
-        if (phase !== "error") {
-          setPhase("error");
-        }
+        setPhase("error");
+        phaseRef.current = "error";
       }
     } catch {
-      // Error already reported via onProgress, phase set to "error" in handleProgress
-      if (phase !== "error") {
+      // Error may already be reported via handleProgress
+      if (phaseRef.current === "processing") {
         setPhase("error");
+        phaseRef.current = "error";
       }
     }
-  }, [onConfirm, handleProgress, phase]);
+  }, [onConfirm, handleProgress]);
 
   const handleRetry = useCallback(() => {
     runOrder();
   }, [runOrder]);
 
+  // Real-time steps 4-5 completion via match detection
+  useEffect(() => {
+    if (!submittedOrder || !matches.data) return;
+    if (phaseRef.current !== "monitoring" && phaseRef.current !== "complete") return;
+
+    const commitmentPrefix = submittedOrder.commitment.slice(0, 16) + "...";
+
+    for (const match of matches.data) {
+      const isMatch =
+        match.commitmentAPrefix === commitmentPrefix ||
+        match.commitmentBPrefix === commitmentPrefix;
+
+      if (!isMatch) continue;
+
+      const isDeepBook = match.commitmentBPrefix.startsWith("deepbook:");
+
+      if (match.settled) {
+        // Settlement complete
+        setSteps(prev => prev.map(step => {
+          if (step.id === "await-match") {
+            return { ...step, status: "complete" as const, desc: "MATCH FOUND" };
+          }
+          if (step.id === "settlement") {
+            return { ...step, status: "complete" as const, desc: "SETTLEMENT CONFIRMED" };
+          }
+          return step;
+        }));
+        if (match.settlementDigest) {
+          setSettlementDigest(match.settlementDigest);
+        }
+        setPhase("complete");
+        phaseRef.current = "complete";
+      } else if (!isDeepBook) {
+        // Matched but not yet settled
+        setSteps(prev => prev.map(step => {
+          if (step.id === "await-match") {
+            return { ...step, status: "complete" as const, desc: "MATCH FOUND" };
+          }
+          if (step.id === "settlement") {
+            return { ...step, status: "active" as const, desc: "SETTLING VIA DEEPBOOK FLASH LOAN" };
+          }
+          return step;
+        }));
+      }
+
+      break;
+    }
+  }, [matches.data, submittedOrder]);
+
   const isProcessing = phase === "processing";
+
+  // Batch countdown display
+  const batchData = batchStatus.data;
+  const timeRemainingSec = batchData ? Math.max(0, Math.ceil(batchData.timeRemainingMs / 1000)) : null;
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
@@ -119,19 +196,33 @@ export function OrderConfirmationModal({
         hideCloseButton={isProcessing}
         onInteractOutside={(e) => { if (isProcessing) e.preventDefault(); }}
         onEscapeKeyDown={(e) => { if (isProcessing) e.preventDefault(); }}
+        className={cn(
+          isExpanded && "max-w-3xl",
+          "transition-[max-width] duration-300"
+        )}
       >
         <DialogHeader>
           <DialogTitle>
-            {phase === "confirm" ? "CONFIRM ORDER" : phase === "complete" ? "ORDER SUBMITTED" : phase === "error" ? "ORDER FAILED" : "PROCESSING ORDER"}
+            {phase === "confirm"
+              ? "CONFIRM ORDER"
+              : phase === "processing"
+                ? "PROCESSING ORDER"
+                : phase === "monitoring"
+                  ? "MONITORING ORDER"
+                  : phase === "complete"
+                    ? "ORDER SETTLED"
+                    : "ORDER FAILED"}
           </DialogTitle>
           <DialogDescription>
             {phase === "confirm"
               ? "HIDDEN LIMIT ORDER ON ZEBRA DARK POOL"
-              : phase === "complete"
-                ? "YOUR ORDER IS NOW BEING MONITORED"
-                : phase === "error"
-                  ? "AN ERROR OCCURRED DURING SUBMISSION"
-                  : "PLEASE WAIT — DO NOT CLOSE THIS WINDOW"}
+              : phase === "processing"
+                ? "PLEASE WAIT \u2014 DO NOT CLOSE THIS WINDOW"
+                : phase === "monitoring"
+                  ? "WAITING FOR BATCH RESOLUTION"
+                  : phase === "complete"
+                    ? "YOUR ORDER HAS BEEN MATCHED AND SETTLED"
+                    : "AN ERROR OCCURRED DURING SUBMISSION"}
           </DialogDescription>
         </DialogHeader>
 
@@ -227,8 +318,50 @@ export function OrderConfirmationModal({
             </>
           )}
 
-          {(phase === "processing" || phase === "complete" || phase === "error") && (
-            <TransactionStepIndicator steps={steps} />
+          {/* SPLIT LAYOUT for processing/monitoring/complete/error */}
+          {isExpanded && (
+            <div className="flex gap-6 px-2">
+              {/* LEFT PANEL: Step indicator + batch timer */}
+              <div className="w-[280px] shrink-0 space-y-6">
+                <TransactionStepIndicator steps={steps} />
+
+                {/* BATCH COUNTDOWN (monitoring phase) */}
+                {(phase === "monitoring" || phase === "processing") && batchData && (
+                  <div className="border-t border-border pt-4 space-y-2">
+                    <p className="text-[10px] tracking-widest text-muted-foreground text-center">
+                      BATCH #{batchData.batchId}
+                    </p>
+                    {batchData.status === "resolving" ? (
+                      <p className="text-xs font-mono text-center animate-pulse">
+                        RESOLVING BATCH...
+                      </p>
+                    ) : batchData.status === "accumulating" && timeRemainingSec !== null ? (
+                      <>
+                        <p className="text-2xl font-mono text-center">
+                          {timeRemainingSec}s
+                        </p>
+                        <p className="text-[9px] tracking-wide text-muted-foreground text-center">
+                          ORDERS ACCUMULATE FOR 60s BEFORE TEE RESOLVES
+                        </p>
+                      </>
+                    ) : null}
+                    {batchData.orderCount > 0 && (
+                      <p className="text-[9px] tracking-wide text-muted-foreground text-center">
+                        {batchData.orderCount} ORDER{batchData.orderCount !== 1 ? "S" : ""} IN BATCH
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* RIGHT PANEL: Execution log */}
+              <div className="flex-1 border-l border-border pl-6 min-w-0">
+                <OrderLogPanel
+                  stepData={stepData}
+                  settlementDigest={settlementDigest}
+                />
+              </div>
+            </div>
           )}
         </div>
 
@@ -243,10 +376,27 @@ export function OrderConfirmationModal({
               </Button>
             </>
           )}
-          {phase === "complete" && (
+          {phase === "monitoring" && (
             <Button onClick={() => handleOpenChange(false)}>
               CLOSE
             </Button>
+          )}
+          {phase === "complete" && (
+            <div className="flex items-center gap-4">
+              {settlementDigest && (
+                <a
+                  href={`https://suiscan.xyz/testnet/tx/${settlementDigest}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[10px] tracking-widest text-blue-400 hover:text-blue-300 underline underline-offset-2"
+                >
+                  VIEW SETTLEMENT
+                </a>
+              )}
+              <Button onClick={() => handleOpenChange(false)}>
+                CLOSE
+              </Button>
+            </div>
           )}
           {phase === "error" && (
             <>

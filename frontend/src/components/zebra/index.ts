@@ -5,3 +5,4 @@ export { PrivacyBadge } from "./privacy-badge";
 export { ExecutionFlow, ProgressBar } from "./execution-flow";
 export { Navbar } from "./navbar";
 export { TransactionStepIndicator } from "./transaction-step-indicator";
+export { OrderLogPanel } from "./order-log-panel";
