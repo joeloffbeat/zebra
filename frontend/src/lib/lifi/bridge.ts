@@ -1,6 +1,6 @@
 import { getRoutes, executeRoute, getStatus } from '@lifi/sdk';
 import type { Route, StatusResponse } from '@lifi/sdk';
-import { LIFI_CHAIN_IDS, SUI_USDC_ADDRESS } from '../constants';
+import { LIFI_CHAIN_IDS } from '../constants';
 
 export interface BridgeQuote {
   route: Route;
@@ -20,6 +20,7 @@ export async function getAllRoutesToSui(
   fromAmount: string,
   fromAddress: string,
   toAddress: string,
+  toTokenAddress: string,
 ): Promise<BridgeQuote[]> {
   const response = await getRoutes({
     fromChainId,
@@ -27,7 +28,7 @@ export async function getAllRoutesToSui(
     fromAmount,
     fromAddress,
     toChainId: LIFI_CHAIN_IDS.SUI,
-    toTokenAddress: SUI_USDC_ADDRESS,
+    toTokenAddress,
     toAddress,
   });
 

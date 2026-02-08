@@ -25,6 +25,8 @@ import {
   NATIVE_ETH_ADDRESS,
   ETH_DECIMALS,
   USDC_DECIMALS,
+  SUI_USDC_ADDRESS,
+  NATIVE_SUI_ADDRESS,
 } from "@/lib/constants";
 
 const CHAINS = [
@@ -37,7 +39,13 @@ const TOKENS = [
   { id: "eth", name: "ETH", decimals: ETH_DECIMALS },
 ] as const;
 
+const TO_TOKENS = [
+  { id: "usdc", name: "USDC", address: SUI_USDC_ADDRESS, decimals: 6 },
+  { id: "sui", name: "SUI", address: NATIVE_SUI_ADDRESS, decimals: 9 },
+] as const;
+
 type FromToken = (typeof TOKENS)[number]["id"];
+type ToToken = (typeof TO_TOKENS)[number]["id"];
 type BridgeStatus = "idle" | "quoting" | "quoted" | "executing" | "success" | "error";
 
 function truncateAddress(address: string): string {
@@ -52,6 +60,7 @@ function formatTime(seconds: number): string {
 export default function DepositPage() {
   const [fromChain, setFromChain] = useState("arbitrum");
   const [fromToken, setFromToken] = useState<FromToken>("usdc");
+  const [toToken, setToToken] = useState<ToToken>("usdc");
   const [amount, setAmount] = useState("");
   const [quotes, setQuotes] = useState<BridgeQuote[]>([]);
   const [selectedQuote, setSelectedQuote] = useState<BridgeQuote | null>(null);
@@ -97,6 +106,7 @@ export default function DepositPage() {
   const bothConnected = isPrivyAuthenticated && !!effectiveSuiAddress;
   const selectedChain = CHAINS.find((c) => c.id === fromChain) || CHAINS[0];
   const selectedToken = TOKENS.find((t) => t.id === fromToken) || TOKENS[0];
+  const selectedToToken = TO_TOKENS.find((t) => t.id === toToken) || TO_TOKENS[0];
 
   // EVM balances on selected chain
   const { data: ethBalanceData } = useBalance({
@@ -175,6 +185,7 @@ export default function DepositPage() {
         amountRaw,
         evmAddress,
         effectiveSuiAddress,
+        selectedToToken.address,
       );
 
       setQuotes(results);
@@ -192,7 +203,7 @@ export default function DepositPage() {
       setError(err instanceof Error ? err.message : "Failed to get quotes");
       setStatus("error");
     }
-  }, [amount, evmAddress, effectiveSuiAddress, selectedChain.chainId, fromToken, selectedToken.decimals]);
+  }, [amount, evmAddress, effectiveSuiAddress, selectedChain.chainId, fromToken, selectedToken.decimals, selectedToToken.address]);
 
   const handleExecuteBridge = useCallback(async () => {
     if (!selectedQuote) return;
@@ -212,7 +223,7 @@ export default function DepositPage() {
   }, [selectedQuote]);
 
   const estimatedOutput = selectedQuote
-    ? (Number(selectedQuote.estimatedOutput) / 1e6).toFixed(2)
+    ? (Number(selectedQuote.estimatedOutput) / Math.pow(10, selectedToToken.decimals)).toFixed(selectedToToken.id === "sui" ? 4 : 2)
     : null;
 
   const estimatedTime = selectedQuote
@@ -392,9 +403,26 @@ export default function DepositPage() {
               <span className="text-xs tracking-wide">SUI MAINNET</span>
             </div>
 
-            <div className="flex items-center justify-between py-3">
-              <span className="text-xs tracking-widest">TOKEN</span>
-              <span className="text-xs tracking-wide">USDC</span>
+            <div className="space-y-2 py-3">
+              <Label>TOKEN</Label>
+              <Select
+                value={toToken}
+                onValueChange={(v) => {
+                  setToToken(v as ToToken);
+                  resetQuotes();
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TO_TOKENS.map((token) => (
+                    <SelectItem key={token.id} value={token.id}>
+                      {token.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
@@ -413,7 +441,7 @@ export default function DepositPage() {
                 <div className="space-y-3">
                   {quotes.map((q, i) => {
                     const isSelected = selectedQuote?.route.id === q.route.id;
-                    const output = (Number(q.estimatedOutput) / 1e6).toFixed(2);
+                    const output = (Number(q.estimatedOutput) / Math.pow(10, selectedToToken.decimals)).toFixed(selectedToToken.id === "sui" ? 4 : 2);
                     const time = formatTime(q.estimatedTime);
 
                     return (
@@ -455,7 +483,7 @@ export default function DepositPage() {
                           ))}
                         </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground ml-5">
-                          <span className="font-mono">~{output} USDC</span>
+                          <span className="font-mono">~{output} {selectedToToken.name}</span>
                           <span>{time}</span>
                           <span className="font-mono">GAS ~${q.gasCostUSD}</span>
                         </div>
@@ -512,7 +540,7 @@ export default function DepositPage() {
                 YOU RECEIVE
               </span>
               <span className="font-mono">
-                {estimatedOutput ? `~${estimatedOutput} USDC` : "\u2014"}
+                {estimatedOutput ? `~${estimatedOutput} ${selectedToToken.name}` : "\u2014"}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
