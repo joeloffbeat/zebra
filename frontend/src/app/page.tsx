@@ -25,17 +25,19 @@ export default function LandingPage() {
       const frameNum = String(i).padStart(3, "0");
       img.src = `/frames/frame${frameNum}.jpg`;
 
-      img.onload = () => {
+      const onComplete = () => {
         loadedCount++;
         setLoadProgress(Math.round((loadedCount / TOTAL_FRAMES) * 100));
 
         if (loadedCount === TOTAL_FRAMES) {
           imagesRef.current = images;
           setImagesLoaded(true);
-          // Draw first frame
           drawFrame(0);
         }
       };
+
+      img.onload = onComplete;
+      img.onerror = onComplete;
 
       images[i - 1] = img;
     }

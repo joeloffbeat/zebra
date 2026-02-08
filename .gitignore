@@ -26,7 +26,6 @@ out/
 circuits/ptau/
 
 # Frontend large assets
-frontend/public/frames/
 frontend/public/*.mp4
 
 # Move contracts build
