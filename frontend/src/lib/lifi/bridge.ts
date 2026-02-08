@@ -96,15 +96,39 @@ export async function getAllRoutesToSui(
   });
 }
 
-export async function executeBridge(route: Route): Promise<{ txHash?: string }> {
+export interface BridgeResult {
+  sourceTxHash?: string;
+  sourceTxLink?: string;
+  destTxHash?: string;
+  destTxLink?: string;
+}
+
+export async function executeBridge(
+  route: Route,
+  onUpdate?: (status: string) => void,
+): Promise<BridgeResult> {
   const result = await executeRoute(route, {
     updateRouteHook(updatedRoute) {
-      console.log('[LiFi] Route updated:', updatedRoute.id);
+      const step = updatedRoute.steps[0];
+      const proc = step?.execution?.process;
+      if (proc?.length) {
+        const latest = proc[proc.length - 1];
+        onUpdate?.(`${latest.type}: ${latest.status}`);
+      }
     },
   });
 
-  const txHash = result.steps?.[0]?.execution?.process?.[0]?.txHash;
-  return { txHash };
+  // Extract tx hashes from execution processes
+  const processes = result.steps?.flatMap((s) => s.execution?.process || []) || [];
+  const crossChain = processes.find((p) => p.type === 'CROSS_CHAIN' && p.txHash);
+  const receiving = processes.find((p) => p.type === 'RECEIVING_CHAIN' && p.txHash);
+
+  return {
+    sourceTxHash: crossChain?.txHash,
+    sourceTxLink: crossChain?.txLink,
+    destTxHash: receiving?.txHash,
+    destTxLink: receiving?.txLink,
+  };
 }
 
 export async function getBridgeStatus(

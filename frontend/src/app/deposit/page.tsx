@@ -18,7 +18,7 @@ import { useWallet } from "@/hooks/use-wallet";
 import { usePrivyWallets } from "@/hooks/use-privy-wallets";
 import { useWalletStore } from "@/lib/stores/wallet-store";
 import { getAllRoutesToSui, executeBridge } from "@/lib/lifi/bridge";
-import type { BridgeQuote } from "@/lib/lifi/bridge";
+import type { BridgeQuote, BridgeResult } from "@/lib/lifi/bridge";
 import {
   LIFI_CHAIN_IDS,
   USDC_BY_CHAIN,
@@ -57,7 +57,7 @@ export default function DepositPage() {
   const [selectedQuote, setSelectedQuote] = useState<BridgeQuote | null>(null);
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [error, setError] = useState<string | null>(null);
-  const [txHash, setTxHash] = useState<string | null>(null);
+  const [bridgeResult, setBridgeResult] = useState<BridgeResult | null>(null);
 
   const [selectedSuiAddress, setSelectedSuiAddress] = useState<string | null>(null);
 
@@ -202,7 +202,7 @@ export default function DepositPage() {
 
     try {
       const result = await executeBridge(selectedQuote.route);
-      if (result.txHash) setTxHash(result.txHash);
+      setBridgeResult(result);
       setStatus("success");
     } catch (err) {
       console.error("[LiFi] Bridge failed:", err);
@@ -556,9 +556,36 @@ export default function DepositPage() {
             <div className="px-6 py-3 border-b border-border">
               <div className="text-[10px] tracking-wide text-green-500 border border-green-500/20 p-3">
                 BRIDGE SUBMITTED SUCCESSFULLY
-                {txHash && (
-                  <span className="block mt-1 font-mono opacity-60">
-                    TX: {txHash.slice(0, 10)}...{txHash.slice(-6)}
+                {bridgeResult?.sourceTxHash && (
+                  <span className="flex items-center gap-1.5 mt-2 font-mono opacity-60">
+                    <span className="text-muted-foreground">SOURCE:</span>{" "}
+                    {bridgeResult.sourceTxHash.slice(0, 10)}...{bridgeResult.sourceTxHash.slice(-6)}
+                    {bridgeResult.sourceTxLink && (
+                      <a
+                        href={bridgeResult.sourceTxLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center hover:opacity-60 text-green-500"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </a>
+                    )}
+                  </span>
+                )}
+                {bridgeResult?.destTxHash && (
+                  <span className="flex items-center gap-1.5 mt-1 font-mono opacity-60">
+                    <span className="text-muted-foreground">DEST:</span>{" "}
+                    {bridgeResult.destTxHash.slice(0, 10)}...{bridgeResult.destTxHash.slice(-6)}
+                    {bridgeResult.destTxLink && (
+                      <a
+                        href={bridgeResult.destTxLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center hover:opacity-60 text-green-500"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                      </a>
+                    )}
                   </span>
                 )}
               </div>
@@ -619,6 +646,7 @@ export default function DepositPage() {
                   setQuotes([]);
                   setSelectedQuote(null);
                   setAmount("");
+                  setBridgeResult(null);
                 }}
               >
                 BRIDGE AGAIN
