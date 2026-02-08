@@ -28,8 +28,8 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const NETWORK = 'mainnet';
 const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), network: 'mainnet' });
 
-// Seal mainnet package
-const SEAL_PACKAGE_ID = '0xcb83a248bda5f7a0a431e6bf9e96d184e604130ec5218696e3f1211113b447b7';
+// Seal allowlist package (deployed by Zebra)
+const SEAL_PACKAGE_ID = process.env.SEAL_PACKAGE_ID || '0x3a82228cc8f999bc737643013626b502a8ba2792725a7d87908d60e00cde5945';
 
 // Mainnet key server object IDs (set via SEAL_KEY_SERVERS env var, comma-separated)
 const KEY_SERVER_IDS = process.env.SEAL_KEY_SERVERS

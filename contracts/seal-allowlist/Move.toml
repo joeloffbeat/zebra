@@ -1,0 +1,7 @@
+[package]
+name = "zebra_seal"
+version = "0.0.1"
+edition = "2024.beta"
+
+[addresses]
+zebra_seal = "0x0"
