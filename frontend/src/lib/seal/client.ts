@@ -2,11 +2,10 @@ import { SealClient } from '@mysten/seal';
 import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { SEAL_PACKAGE_ID } from '../constants';
 
-// Mainnet key server object IDs (update with real mainnet key server IDs)
-const MAINNET_KEY_SERVERS = [
-  'TODO_MAINNET_KEY_SERVER_1',
-  'TODO_MAINNET_KEY_SERVER_2',
-];
+// Mainnet key server object IDs (set via NEXT_PUBLIC_SEAL_KEY_SERVERS env var, comma-separated)
+const MAINNET_KEY_SERVERS: string[] = process.env.NEXT_PUBLIC_SEAL_KEY_SERVERS
+  ? process.env.NEXT_PUBLIC_SEAL_KEY_SERVERS.split(',').map(s => s.trim())
+  : [];
 
 let sealClient: SealClient | null = null;
 

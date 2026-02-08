@@ -31,11 +31,16 @@ const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), netwo
 // Seal mainnet package
 const SEAL_PACKAGE_ID = '0xcb83a248bda5f7a0a431e6bf9e96d184e604130ec5218696e3f1211113b447b7';
 
-// Mainnet key server object IDs (update with real mainnet key server IDs)
-const KEY_SERVER_IDS = [
-  'TODO_MAINNET_KEY_SERVER_1',
-  'TODO_MAINNET_KEY_SERVER_2',
-];
+// Mainnet key server object IDs (set via SEAL_KEY_SERVERS env var, comma-separated)
+const KEY_SERVER_IDS = process.env.SEAL_KEY_SERVERS
+  ? process.env.SEAL_KEY_SERVERS.split(',').map(s => s.trim())
+  : [];
+
+if (KEY_SERVER_IDS.length === 0) {
+  console.error('SEAL_KEY_SERVERS not set. Add comma-separated key server object IDs to .env');
+  console.error('Get mainnet key server IDs from: https://seal-docs.wal.app/Pricing');
+  process.exit(1);
+}
 
 async function getKeypair(): Promise<Ed25519Keypair> {
   const privateKey = process.env.SUI_PRIVATE_KEY;

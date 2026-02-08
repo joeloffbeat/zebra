@@ -36,19 +36,18 @@ dotenv.config({ path: path.join(__dirname, '../.env') });
 const NETWORK = 'mainnet';
 const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), network: 'mainnet' });
 
-const PACKAGE_ID = 'TODO_MAINNET_DARK_POOL_PACKAGE';
-const POOL_OBJECT_ID = 'TODO_MAINNET_DARK_POOL_OBJECT';
-const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3001';
-const SEAL_ALLOWLIST_ID = 'TODO_MAINNET_SEAL_ALLOWLIST_ID';
-const SEAL_PACKAGE_ID = '0xcb83a248bda5f7a0a431e6bf9e96d184e604130ec5218696e3f1211113b447b7';
+const PACKAGE_ID = process.env.DARK_POOL_PACKAGE || '0xca85bfc10d129d5e4f7bcabeecd6a332568e75b23fa9a929c0b83fc8c7aee2b2';
+const POOL_OBJECT_ID = process.env.DARK_POOL_OBJECT || '0x3f47d9eaa0e6a1a159bbdd1fdc8a8bcc46252c51ed7e0494d1e10341c2ba9e58';
+const BACKEND_URL = process.env.BACKEND_URL || 'http://localhost:3006';
+const SEAL_ALLOWLIST_ID = process.env.SEAL_ALLOWLIST_ID || '';
+const SEAL_PACKAGE_ID = process.env.SEAL_PACKAGE_ID || '0xcb83a248bda5f7a0a431e6bf9e96d184e604130ec5218696e3f1211113b447b7';
 
 const TYPE_ARGS: [string] = ['0x2::sui::SUI'];
 
-// Mainnet key server object IDs (update with real mainnet key server IDs)
-const MAINNET_KEY_SERVERS = [
-  'TODO_MAINNET_KEY_SERVER_1',
-  'TODO_MAINNET_KEY_SERVER_2',
-];
+// Mainnet key server object IDs (from SEAL_KEY_SERVERS env var, comma-separated)
+const MAINNET_KEY_SERVERS = process.env.SEAL_KEY_SERVERS
+  ? process.env.SEAL_KEY_SERVERS.split(',').map(s => s.trim())
+  : [];
 
 // BN254 base field prime
 const P = 21888242871839275222246405745257275088696311157297823662689037894645226208583n;

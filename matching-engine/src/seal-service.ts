@@ -6,12 +6,6 @@ import { Transaction } from '@mysten/sui/transactions';
 import { config } from './config.js';
 import { logService } from './log-service.js';
 
-// Mainnet key server object IDs (update with real mainnet key server IDs)
-const MAINNET_KEY_SERVERS = [
-  'TODO_MAINNET_KEY_SERVER_1',
-  'TODO_MAINNET_KEY_SERVER_2',
-];
-
 export interface DecryptedOrderData {
   side: number;
   price: bigint;
@@ -31,9 +25,15 @@ export class SealService {
   constructor() {
     this.suiClient = new SuiJsonRpcClient({ url: config.suiRpcUrl, network: 'mainnet' });
 
+    const keyServers = config.sealKeyServers;
+    if (keyServers.length === 0) {
+      console.warn('SealService: No SEAL_KEY_SERVERS configured — decryption will be unavailable');
+      logService.addLog('warn', 'seal', 'No SEAL_KEY_SERVERS configured — decryption will be unavailable');
+    }
+
     this.sealClient = new SealClient({
       suiClient: this.suiClient,
-      serverConfigs: MAINNET_KEY_SERVERS.map((id: string) => ({
+      serverConfigs: keyServers.map((id: string) => ({
         objectId: id,
         weight: 1,
       })),

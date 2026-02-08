@@ -219,13 +219,14 @@ app.listen(config.port, async () => {
   console.log(`TEE public key: ${teeService.getPublicKeyHex()}`);
   logService.addLog('info', 'engine', `TEE public key: ${teeService.getPublicKeyHex()}`);
 
-  if (!config.sealAllowlistId) {
-    console.error('FATAL: SEAL_ALLOWLIST_ID not set — Seal encryption is mandatory');
-    console.error('Run: npx tsx scripts/setup-seal.ts');
-    process.exit(1);
+  if (!config.sealAllowlistId || config.sealAllowlistId.startsWith('TODO')) {
+    console.warn('WARNING: SEAL_ALLOWLIST_ID not set — Seal decryption disabled');
+    console.warn('Run: npx tsx scripts/setup-seal.ts');
+    logService.addLog('warn', 'engine', 'SEAL_ALLOWLIST_ID not set — Seal decryption disabled');
+  } else {
+    console.log('Seal encryption: enabled');
+    logService.addLog('info', 'engine', 'Seal encryption: enabled');
   }
-  console.log('Seal encryption: enabled');
-  logService.addLog('info', 'engine', 'Seal encryption: enabled');
 
   console.log(`Sui RPC: ${config.suiRpcUrl}`);
   logService.addLog('info', 'engine', `Sui RPC: ${config.suiRpcUrl}`);
