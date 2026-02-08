@@ -11,9 +11,15 @@ export function initLiFi(wagmiConfig: WagmiConfig) {
   if (initialized) return;
 
   const evmProvider = EVM({
-    getWalletClient: () => getWagmiWalletClient(wagmiConfig) as never,
-    switchChain: (chainId: number) =>
-      wagmiSwitchChain(wagmiConfig, { chainId }) as never,
+    getWalletClient: async () => {
+      const client = await getWagmiWalletClient(wagmiConfig);
+      return client as never;
+    },
+    switchChain: async (chainId: number) => {
+      await wagmiSwitchChain(wagmiConfig, { chainId });
+      const client = await getWagmiWalletClient(wagmiConfig, { chainId });
+      return client as never;
+    },
   });
 
   createConfig({
