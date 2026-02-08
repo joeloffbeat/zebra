@@ -21,7 +21,7 @@ export function HerdVisualization({
       {/* VIDEO BACKGROUND */}
       <video
         className="absolute inset-0 w-full h-full object-cover"
-        src="/herd.mp4"
+        src="/herd-compressed.mp4"
         autoPlay
         loop
         muted

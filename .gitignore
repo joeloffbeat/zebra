@@ -25,8 +25,9 @@ out/
 # ZK circuits - large files
 circuits/ptau/
 
-# Frontend large assets
-frontend/public/*.mp4
+# Frontend large assets (keep herd-compressed.mp4 for trade page)
+frontend/public/herd.mp4
+frontend/public/zebra-walk.mp4
 
 # Move contracts build
 contracts/build/
