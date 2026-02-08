@@ -12,6 +12,8 @@ export interface BridgeQuote {
   totalFeesUSD: string;
   tags: string[];
   steps: { tool: string; type: string }[];
+  toTokenSymbol: string;
+  toTokenDecimals: number;
 }
 
 export async function getAllRoutesToSui(
@@ -93,6 +95,8 @@ export async function getAllRoutesToSui(
       totalFeesUSD,
       tags: route.tags || [],
       steps,
+      toTokenSymbol: route.toToken.symbol,
+      toTokenDecimals: route.toToken.decimals,
     };
   });
 }
@@ -106,29 +110,40 @@ export interface BridgeResult {
 
 export async function executeBridge(
   route: Route,
-  onUpdate?: (status: string) => void,
+  onProgressUpdate?: (result: BridgeResult) => void,
 ): Promise<BridgeResult> {
+  const current: BridgeResult = {};
+
   const result = await executeRoute(route, {
     updateRouteHook(updatedRoute) {
-      const step = updatedRoute.steps[0];
-      const proc = step?.execution?.process;
-      if (proc?.length) {
-        const latest = proc[proc.length - 1];
-        onUpdate?.(`${latest.type}: ${latest.status}`);
+      const processes = updatedRoute.steps?.flatMap((s) => s.execution?.process || []) || [];
+
+      const crossChain = processes.find((p) => p.type === 'CROSS_CHAIN' && p.txHash);
+      if (crossChain?.txHash && !current.sourceTxHash) {
+        current.sourceTxHash = crossChain.txHash;
+        current.sourceTxLink = crossChain.txLink;
+        onProgressUpdate?.({ ...current });
+      }
+
+      const receiving = processes.find((p) => p.type === 'RECEIVING_CHAIN' && p.txHash);
+      if (receiving?.txHash && !current.destTxHash) {
+        current.destTxHash = receiving.txHash;
+        current.destTxLink = receiving.txLink;
+        onProgressUpdate?.({ ...current });
       }
     },
   });
 
-  // Extract tx hashes from execution processes
+  // Final extraction in case updateRouteHook missed anything
   const processes = result.steps?.flatMap((s) => s.execution?.process || []) || [];
   const crossChain = processes.find((p) => p.type === 'CROSS_CHAIN' && p.txHash);
   const receiving = processes.find((p) => p.type === 'RECEIVING_CHAIN' && p.txHash);
 
   return {
-    sourceTxHash: crossChain?.txHash,
-    sourceTxLink: crossChain?.txLink,
-    destTxHash: receiving?.txHash,
-    destTxLink: receiving?.txLink,
+    sourceTxHash: crossChain?.txHash ?? current.sourceTxHash,
+    sourceTxLink: crossChain?.txLink ?? current.sourceTxLink,
+    destTxHash: receiving?.txHash ?? current.destTxHash,
+    destTxLink: receiving?.txLink ?? current.destTxLink,
   };
 }
 

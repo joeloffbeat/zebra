@@ -210,9 +210,13 @@ export default function DepositPage() {
 
     setStatus("executing");
     setError(null);
+    setBridgeResult(null);
 
     try {
-      const result = await executeBridge(selectedQuote.route);
+      const result = await executeBridge(
+        selectedQuote.route,
+        (progressUpdate) => setBridgeResult(progressUpdate),
+      );
       setBridgeResult(result);
       setStatus("success");
     } catch (err) {
@@ -223,8 +227,10 @@ export default function DepositPage() {
   }, [selectedQuote]);
 
   const estimatedOutput = selectedQuote
-    ? (Number(selectedQuote.estimatedOutput) / Math.pow(10, selectedToToken.decimals)).toFixed(selectedToToken.id === "sui" ? 4 : 2)
+    ? (Number(selectedQuote.estimatedOutput) / Math.pow(10, selectedQuote.toTokenDecimals)).toFixed(selectedQuote.toTokenDecimals > 6 ? 4 : 2)
     : null;
+
+  const estimatedOutputSymbol = selectedQuote?.toTokenSymbol ?? selectedToToken.name;
 
   const estimatedTime = selectedQuote
     ? formatTime(selectedQuote.estimatedTime)
@@ -441,7 +447,7 @@ export default function DepositPage() {
                 <div className="space-y-3">
                   {quotes.map((q, i) => {
                     const isSelected = selectedQuote?.route.id === q.route.id;
-                    const output = (Number(q.estimatedOutput) / Math.pow(10, selectedToToken.decimals)).toFixed(selectedToToken.id === "sui" ? 4 : 2);
+                    const output = (Number(q.estimatedOutput) / Math.pow(10, q.toTokenDecimals)).toFixed(q.toTokenDecimals > 6 ? 4 : 2);
                     const time = formatTime(q.estimatedTime);
 
                     return (
@@ -483,7 +489,7 @@ export default function DepositPage() {
                           ))}
                         </div>
                         <div className="flex items-center gap-4 text-xs text-muted-foreground ml-5">
-                          <span className="font-mono">~{output} {selectedToToken.name}</span>
+                          <span className="font-mono">~{output} {q.toTokenSymbol}</span>
                           <span>{time}</span>
                           <span className="font-mono">GAS ~${q.gasCostUSD}</span>
                         </div>
@@ -540,7 +546,7 @@ export default function DepositPage() {
                 YOU RECEIVE
               </span>
               <span className="font-mono">
-                {estimatedOutput ? `~${estimatedOutput} ${selectedToToken.name}` : "\u2014"}
+                {estimatedOutput ? `~${estimatedOutput} ${estimatedOutputSymbol}` : "\u2014"}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
@@ -579,12 +585,16 @@ export default function DepositPage() {
             </div>
           )}
 
-          {/* SUCCESS */}
-          {status === "success" && (
+          {/* BRIDGE PROGRESS / SUCCESS */}
+          {(status === "executing" || status === "success") && bridgeResult && (bridgeResult.sourceTxHash || bridgeResult.destTxHash) && (
             <div className="px-6 py-3 border-b border-border">
-              <div className="text-[10px] tracking-wide text-green-500 border border-green-500/20 p-3">
-                BRIDGE SUBMITTED SUCCESSFULLY
-                {bridgeResult?.sourceTxHash && (
+              <div className={`text-[10px] tracking-wide border p-3 ${
+                status === "success"
+                  ? "text-green-500 border-green-500/20"
+                  : "text-muted-foreground border-border"
+              }`}>
+                {status === "success" ? "BRIDGE COMPLETED" : "BRIDGE IN PROGRESS..."}
+                {bridgeResult.sourceTxHash && (
                   <span className="flex items-center gap-1.5 mt-2 font-mono opacity-60">
                     <span className="text-muted-foreground">SOURCE:</span>{" "}
                     {bridgeResult.sourceTxHash.slice(0, 10)}...{bridgeResult.sourceTxHash.slice(-6)}
@@ -593,14 +603,14 @@ export default function DepositPage() {
                         href={bridgeResult.sourceTxLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center hover:opacity-60 text-green-500"
+                        className="inline-flex items-center hover:opacity-60"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       </a>
                     )}
                   </span>
                 )}
-                {bridgeResult?.destTxHash && (
+                {bridgeResult.destTxHash ? (
                   <span className="flex items-center gap-1.5 mt-1 font-mono opacity-60">
                     <span className="text-muted-foreground">DEST:</span>{" "}
                     {bridgeResult.destTxHash.slice(0, 10)}...{bridgeResult.destTxHash.slice(-6)}
@@ -609,13 +619,26 @@ export default function DepositPage() {
                         href={bridgeResult.destTxLink}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="inline-flex items-center hover:opacity-60 text-green-500"
+                        className="inline-flex items-center hover:opacity-60"
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                       </a>
                     )}
                   </span>
-                )}
+                ) : status === "executing" && bridgeResult.sourceTxHash ? (
+                  <span className="block mt-1 font-mono opacity-40">
+                    DEST: AWAITING CONFIRMATION...
+                  </span>
+                ) : null}
+              </div>
+            </div>
+          )}
+
+          {/* SUCCESS (no tx data) */}
+          {status === "success" && !bridgeResult?.sourceTxHash && !bridgeResult?.destTxHash && (
+            <div className="px-6 py-3 border-b border-border">
+              <div className="text-[10px] tracking-wide text-green-500 border border-green-500/20 p-3">
+                BRIDGE SUBMITTED SUCCESSFULLY
               </div>
             </div>
           )}
