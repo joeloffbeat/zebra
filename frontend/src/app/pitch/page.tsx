@@ -16,6 +16,7 @@ const SLIDE_IDS = [
   "integration",
   "novel",
   "demo",
+  "livedemo",
   "stack",
   "closing",
 ] as const;
@@ -31,6 +32,7 @@ const SLIDE_LABELS = [
   "INTEGRATION",
   "NOVEL",
   "DEMO",
+  "LIVE DEMO",
   "STACK",
   "CLOSING",
 ];
@@ -1011,9 +1013,32 @@ export default function PitchPage() {
       </Slide>
 
       {/* ════════════════════════════════════════════════════════════════════
-          SLIDE 11: TECH STACK
+          SLIDE 11: LIVE DEMO
       ════════════════════════════════════════════════════════════════════ */}
-      <Slide id="stack" onInView={() => setActiveSlide(10)}>
+      <Slide id="livedemo" inverted onInView={() => setActiveSlide(10)}>
+        {(isVisible) => (
+          <div className="text-center space-y-10">
+            <FadeIn isVisible={isVisible} delay={0}>
+              <h2 className="text-[80px] md:text-[130px] tracking-[0.2em] font-display leading-none">
+                DEMO
+              </h2>
+            </FadeIn>
+            <FadeIn isVisible={isVisible} delay={400}>
+              <div className="w-20 h-px bg-current mx-auto" />
+            </FadeIn>
+            <FadeIn isVisible={isVisible} delay={600}>
+              <p className="text-[18px] tracking-[0.2em] opacity-50">
+                <ESub text="LIVE ON SUI MAINNET" />
+              </p>
+            </FadeIn>
+          </div>
+        )}
+      </Slide>
+
+      {/* ════════════════════════════════════════════════════════════════════
+          SLIDE 12: TECH STACK
+      ════════════════════════════════════════════════════════════════════ */}
+      <Slide id="stack" onInView={() => setActiveSlide(11)}>
         {(isVisible) => (
           <div className="space-y-14">
             <div className="text-center space-y-5">
@@ -1112,7 +1137,7 @@ export default function PitchPage() {
       {/* ════════════════════════════════════════════════════════════════════
           SLIDE 12: CLOSING
       ════════════════════════════════════════════════════════════════════ */}
-      <Slide id="closing" inverted onInView={() => setActiveSlide(11)}>
+      <Slide id="closing" inverted onInView={() => setActiveSlide(12)}>
         {(isVisible) => (
           <div className="text-center space-y-12">
             <FadeIn isVisible={isVisible} delay={0}>
