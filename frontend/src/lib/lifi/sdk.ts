@@ -1,13 +1,15 @@
 import { createConfig, EVM } from '@lifi/sdk';
-import type { WalletClient } from 'viem';
+import { getWalletClient as getWagmiWalletClient } from '@wagmi/core';
+import type { Config as WagmiConfig } from 'wagmi';
 
 let initialized = false;
-let evmProvider: ReturnType<typeof EVM> | null = null;
 
-export function initLiFi() {
+export function initLiFi(wagmiConfig: WagmiConfig) {
   if (initialized) return;
 
-  evmProvider = EVM();
+  const evmProvider = EVM({
+    getWalletClient: () => getWagmiWalletClient(wagmiConfig) as never,
+  });
 
   createConfig({
     integrator: 'zebra-dark-pool',
@@ -15,12 +17,4 @@ export function initLiFi() {
   });
 
   initialized = true;
-}
-
-export function setLiFiWalletClient(walletClient: WalletClient) {
-  if (evmProvider) {
-    evmProvider.setOptions({
-      getWalletClient: () => Promise.resolve(walletClient as never),
-    });
-  }
 }

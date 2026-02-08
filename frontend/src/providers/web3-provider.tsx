@@ -7,9 +7,8 @@ import { createNetworkConfig, SuiClientProvider, WalletProvider } from '@mysten/
 import { getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ReactNode, useState, useEffect } from 'react';
-import { useWalletClient } from 'wagmi';
 import { wagmiConfig } from '@/lib/wagmi';
-import { initLiFi, setLiFiWalletClient } from '@/lib/lifi/sdk';
+import { initLiFi } from '@/lib/lifi/sdk';
 
 const { networkConfig } = createNetworkConfig({
   mainnet: { url: getJsonRpcFullnodeUrl('mainnet'), network: 'mainnet' },
@@ -18,18 +17,6 @@ const { networkConfig } = createNetworkConfig({
 
 interface Web3ProviderProps {
   children: ReactNode;
-}
-
-function LiFiWalletSync() {
-  const { data: walletClient } = useWalletClient();
-
-  useEffect(() => {
-    if (walletClient) {
-      setLiFiWalletClient(walletClient);
-    }
-  }, [walletClient]);
-
-  return null;
 }
 
 export function Web3Provider({ children }: Web3ProviderProps) {
@@ -46,7 +33,7 @@ export function Web3Provider({ children }: Web3ProviderProps) {
   );
 
   useEffect(() => {
-    initLiFi();
+    initLiFi(wagmiConfig);
   }, []);
 
   const privyAppId = process.env.NEXT_PUBLIC_PRIVY_APP_ID;
@@ -58,7 +45,6 @@ export function Web3Provider({ children }: Web3ProviderProps) {
         <WagmiProvider config={wagmiConfig}>
           <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
             <WalletProvider autoConnect>
-              <LiFiWalletSync />
               {children}
             </WalletProvider>
           </SuiClientProvider>
@@ -86,7 +72,6 @@ export function Web3Provider({ children }: Web3ProviderProps) {
         <PrivyWagmiProvider config={wagmiConfig}>
           <SuiClientProvider networks={networkConfig} defaultNetwork="mainnet">
             <WalletProvider autoConnect>
-              <LiFiWalletSync />
               {children}
             </WalletProvider>
           </SuiClientProvider>
