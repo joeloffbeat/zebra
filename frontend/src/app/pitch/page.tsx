@@ -811,7 +811,7 @@ export default function PitchPage() {
 
               <FadeIn isVisible={isVisible} delay={300}>
                 <p className="text-[14px] tracking-wide text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-                  <EDesc text="EVERY CORE COMPONENT LEVERAGES A SUI-NATIVE PRIMITIVE. NO EXTERNAL CHAINS, NO BRIDGES, NO THIRD-PARTY INFRASTRUCTURE." />
+                  <EDesc text="EVERY CORE PRIVACY PRIMITIVE IS SUI-NATIVE. ALL EVM LIQUIDITY FLOWS IN THROUGH LIFI." />
                 </p>
               </FadeIn>
             </div>
@@ -854,6 +854,20 @@ export default function PitchPage() {
                 </FadeIn>
               ))}
             </div>
+
+            <FadeIn isVisible={isVisible} delay={1050}>
+              <div className="border border-border p-8 space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-[18px] tracking-widest">LIFI PROTOCOL</h3>
+                  <span className="text-[12px] tracking-widest text-muted-foreground border border-border px-3 py-1">
+                    <ELabel text="CROSS-CHAIN" />
+                  </span>
+                </div>
+                <p className="text-[14px] tracking-wide text-muted-foreground leading-relaxed">
+                  <EDesc text="BRIDGE FROM ANY EVM CHAIN — ETHEREUM, ARBITRUM, BASE, OPTIMISM, POLYGON, AND 30+ MORE — DIRECTLY INTO SUI. THE ENTIRE EVM ECOSYSTEM'S LIQUIDITY FUNNELED INTO THE DARK POOL THROUGH A SINGLE AGGREGATED ENTRY POINT." />
+                </p>
+              </div>
+            </FadeIn>
           </div>
         )}
       </Slide>
@@ -899,6 +913,10 @@ export default function PitchPage() {
                 {
                   title: "FULL SUI-NATIVE STACK",
                   desc: "EVERY PRIVACY PRIMITIVE — GROTH16, SEAL, NAUTILUS, DEEPBOOK — IS NATIVE TO SUI. NO EXTERNAL CHAINS, NO BRIDGES FOR CORE FUNCTIONALITY.",
+                },
+                {
+                  title: "ALL-EVM LIQUIDITY GATEWAY",
+                  desc: "USERS BRIDGE FROM ANY EVM CHAIN INTO SUI AND TRADE PRIVATELY — IN A SINGLE FLOW. LIFI PROTOCOL AGGREGATES 30+ EVM CHAINS INTO ONE ENTRY POINT. THE ENTIRE EVM ECOSYSTEM BECOMES SUI DARK POOL LIQUIDITY.",
                 },
               ].map((item, i) => (
                 <FadeIn key={item.title} isVisible={isVisible} delay={300 + i * 120}>
@@ -1059,9 +1077,15 @@ export default function PitchPage() {
                   },
                   {
                     layer: "WALLET",
-                    tech: "@MYSTEN/DAPP-KIT",
+                    tech: "PRIVY + DAPP-KIT",
                     detail:
-                      "SUI WALLET CONNECTION · TRANSACTION SIGNING · BALANCE QUERIES",
+                      "EVM + SUI WALLETS · EMBEDDED WALLETS · CROSS-CHAIN SIGNING",
+                  },
+                  {
+                    layer: "CROSS-CHAIN",
+                    tech: "LIFI PROTOCOL",
+                    detail:
+                      "30+ EVM CHAINS TO SUI · AGGREGATED BRIDGING · ONE-CLICK DEPOSITS",
                   },
                 ].map((row) => (
                   <div
@@ -1142,6 +1166,8 @@ export default function PitchPage() {
                   <span><ELabel text="NAUTILUS" /></span>
                   <span>·</span>
                   <span><ELabel text="SEAL" /></span>
+                  <span>·</span>
+                  <span><ELabel text="LIFI" /></span>
                 </div>
               </div>
             </FadeIn>
