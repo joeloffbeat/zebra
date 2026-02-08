@@ -1,8 +1,15 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAccount } from 'wagmi';
-import { usePrivy, useLogin, useLogout } from '@privy-io/react-auth';
+import {
+  usePrivy,
+  useLogin,
+  useLogout,
+  useWallets,
+  useActiveWallet,
+} from '@privy-io/react-auth';
+import type { ConnectedWallet } from '@privy-io/react-auth';
 import { useCreateWallet } from '@privy-io/react-auth/extended-chains';
 
 export interface PrivyWalletEntry {
@@ -10,11 +17,20 @@ export interface PrivyWalletEntry {
   address: string;
 }
 
+export interface EvmWalletEntry {
+  address: string;
+  label: string; // "EMBEDDED" or "METAMASK" etc.
+  isEmbedded: boolean;
+  wallet: ConnectedWallet;
+}
+
 export function usePrivyWallets() {
   const { address: evmAddress } = useAccount();
   const { ready, authenticated, user } = usePrivy();
   const { login } = useLogin();
   const { logout } = useLogout();
+  const { wallets } = useWallets();
+  const { setActiveWallet } = useActiveWallet();
   const { createWallet } = useCreateWallet();
   const hasAutoCreated = useRef(false);
 
@@ -44,7 +60,47 @@ export function usePrivyWallets() {
     }
   }, [ready, authenticated, user, createWallet]);
 
-  // Extract embedded wallet addresses from linkedAccounts
+  // Separate EVM wallets into embedded vs external (browser)
+  const evmWallets: EvmWalletEntry[] = useMemo(() => {
+    return wallets
+      .filter((w) => w.type === 'ethereum')
+      .map((w) => ({
+        address: w.address,
+        label:
+          w.walletClientType === 'privy'
+            ? 'EMBEDDED'
+            : w.walletClientType.toUpperCase().replace(/_/g, ' '),
+        isEmbedded: w.walletClientType === 'privy',
+        wallet: w,
+      }));
+  }, [wallets]);
+
+  // External (browser) EVM wallet address — first non-embedded EVM wallet
+  const browserEvmAddress = useMemo(() => {
+    const external = evmWallets.find((w) => !w.isEmbedded);
+    return external?.address ?? null;
+  }, [evmWallets]);
+
+  // Embedded SUI address from linkedAccounts
+  const embeddedSuiAddress = useMemo(() => {
+    if (!user?.linkedAccounts) return null;
+    for (const account of user.linkedAccounts) {
+      if (account.type !== 'wallet') continue;
+      const wallet = account as { chainType?: string; address?: string };
+      if (wallet.chainType === 'sui' && wallet.address) return wallet.address;
+    }
+    return null;
+  }, [user?.linkedAccounts]);
+
+  // Switch the active EVM wallet (updates wagmi's useAccount automatically)
+  const setActiveEvmWallet = useCallback(
+    (wallet: ConnectedWallet) => {
+      setActiveWallet(wallet);
+    },
+    [setActiveWallet],
+  );
+
+  // Extract embedded wallet addresses from linkedAccounts (for the dropdown)
   const embeddedWallets: PrivyWalletEntry[] = [];
 
   if (evmAddress) {
@@ -69,6 +125,10 @@ export function usePrivyWallets() {
 
   return {
     evmAddress: evmAddress ?? null,
+    evmWallets,
+    browserEvmAddress,
+    embeddedSuiAddress,
+    setActiveEvmWallet,
     embeddedWallets,
     isPrivyAuthenticated: authenticated,
     isPrivyReady: ready,

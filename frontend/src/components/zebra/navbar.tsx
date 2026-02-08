@@ -20,7 +20,7 @@ const NAV_LINKS = [
 export function Navbar() {
   const pathname = usePathname();
   const { address, isConnected, connect, disconnect } = useWallet();
-  const { embeddedWallets, isPrivyAuthenticated, logoutPrivy } = usePrivyWallets();
+  const { embeddedWallets, browserEvmAddress, isPrivyAuthenticated, logoutPrivy } = usePrivyWallets();
   const { balance } = useWalletStore();
   const [walletModalOpen, setWalletModalOpen] = useState(false);
 
@@ -60,6 +60,7 @@ export function Navbar() {
             {showDropdown ? (
               <WalletDropdown
                 browserSuiAddress={address ?? null}
+                browserEvmAddress={browserEvmAddress}
                 privyWallets={embeddedWallets}
                 balance={balance}
                 onDisconnectSui={disconnect}

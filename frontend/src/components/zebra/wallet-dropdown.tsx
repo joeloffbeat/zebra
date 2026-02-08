@@ -7,6 +7,7 @@ import type { PrivyWalletEntry } from "@/hooks/use-privy-wallets";
 
 interface WalletDropdownProps {
   browserSuiAddress: string | null;
+  browserEvmAddress: string | null;
   privyWallets: PrivyWalletEntry[];
   balance: { sui: string; usdc: string };
   onDisconnectSui: () => void;
@@ -23,6 +24,7 @@ function copyToClipboard(text: string) {
 
 export function WalletDropdown({
   browserSuiAddress,
+  browserEvmAddress,
   privyWallets,
   balance,
   onDisconnectSui,
@@ -98,31 +100,53 @@ export function WalletDropdown({
             )}
 
             {/* Browser Wallet */}
-            {browserSuiAddress && (
+            {(browserSuiAddress || browserEvmAddress) && (
               <div className="border-b border-border">
                 <div className="px-3 pt-3 pb-1">
                   <div className="text-[9px] tracking-widest text-muted-foreground">
                     BROWSER WALLET
                   </div>
                 </div>
-                <div className="px-3 py-2">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <div className="text-[9px] tracking-widest text-muted-foreground">
-                        SUI
+                {browserEvmAddress && (
+                  <div className="px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[9px] tracking-widest text-muted-foreground">
+                          EVM
+                        </div>
+                        <div className="text-xs font-mono">
+                          {truncateAddress(browserEvmAddress)}
+                        </div>
                       </div>
-                      <div className="text-xs font-mono">
-                        {truncateAddress(browserSuiAddress)}
-                      </div>
+                      <button
+                        onClick={() => handleCopy(browserEvmAddress)}
+                        className="text-[9px] tracking-widest text-muted-foreground hover:text-foreground"
+                      >
+                        {copiedAddr === browserEvmAddress ? "COPIED" : "COPY"}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleCopy(browserSuiAddress)}
-                      className="text-[9px] tracking-widest text-muted-foreground hover:text-foreground"
-                    >
-                      {copiedAddr === browserSuiAddress ? "COPIED" : "COPY"}
-                    </button>
                   </div>
-                </div>
+                )}
+                {browserSuiAddress && (
+                  <div className="px-3 py-2">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="text-[9px] tracking-widest text-muted-foreground">
+                          SUI
+                        </div>
+                        <div className="text-xs font-mono">
+                          {truncateAddress(browserSuiAddress)}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => handleCopy(browserSuiAddress)}
+                        className="text-[9px] tracking-widest text-muted-foreground hover:text-foreground"
+                      >
+                        {copiedAddr === browserSuiAddress ? "COPIED" : "COPY"}
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

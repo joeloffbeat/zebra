@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useMemo } from "react";
+import { useState, useCallback, useMemo, useEffect } from "react";
 import { useBalance, useReadContract } from "wagmi";
 import { erc20Abi } from "viem";
 import {
@@ -59,11 +59,42 @@ export default function DepositPage() {
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
 
+  const [selectedSuiAddress, setSelectedSuiAddress] = useState<string | null>(null);
+
   const { address: suiAddress, isConnected: isSuiConnected } = useWallet();
-  const { evmAddress, isPrivyAuthenticated, loginWithPrivy } = usePrivyWallets();
+  const {
+    evmAddress,
+    evmWallets,
+    embeddedSuiAddress,
+    setActiveEvmWallet,
+    isPrivyAuthenticated,
+    loginWithPrivy,
+  } = usePrivyWallets();
   const { balance } = useWalletStore();
 
-  const bothConnected = isPrivyAuthenticated && isSuiConnected;
+  // Default SUI destination to browser wallet when both become available
+  const browserSuiAddress = suiAddress ?? null;
+  const suiOptions = useMemo(() => {
+    const opts: { address: string; label: string }[] = [];
+    if (browserSuiAddress) opts.push({ address: browserSuiAddress, label: "BROWSER" });
+    if (embeddedSuiAddress && embeddedSuiAddress !== browserSuiAddress)
+      opts.push({ address: embeddedSuiAddress, label: "EMBEDDED" });
+    return opts;
+  }, [browserSuiAddress, embeddedSuiAddress]);
+
+  useEffect(() => {
+    if (selectedSuiAddress) return;
+    // Default to browser wallet
+    if (browserSuiAddress) {
+      setSelectedSuiAddress(browserSuiAddress);
+    } else if (embeddedSuiAddress) {
+      setSelectedSuiAddress(embeddedSuiAddress);
+    }
+  }, [browserSuiAddress, embeddedSuiAddress, selectedSuiAddress]);
+
+  const effectiveSuiAddress = selectedSuiAddress ?? browserSuiAddress ?? embeddedSuiAddress;
+
+  const bothConnected = isPrivyAuthenticated && !!effectiveSuiAddress;
   const selectedChain = CHAINS.find((c) => c.id === fromChain) || CHAINS[0];
   const selectedToken = TOKENS.find((t) => t.id === fromToken) || TOKENS[0];
 
@@ -117,7 +148,7 @@ export default function DepositPage() {
 
   const handleGetQuotes = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0) return;
-    if (!evmAddress || !suiAddress) return;
+    if (!evmAddress || !effectiveSuiAddress) return;
 
     setStatus("quoting");
     setError(null);
@@ -143,7 +174,7 @@ export default function DepositPage() {
         tokenAddress,
         amountRaw,
         evmAddress,
-        suiAddress,
+        effectiveSuiAddress,
       );
 
       setQuotes(results);
@@ -161,7 +192,7 @@ export default function DepositPage() {
       setError(err instanceof Error ? err.message : "Failed to get quotes");
       setStatus("error");
     }
-  }, [amount, evmAddress, suiAddress, selectedChain.chainId, fromToken, selectedToken.decimals]);
+  }, [amount, evmAddress, effectiveSuiAddress, selectedChain.chainId, fromToken, selectedToken.decimals]);
 
   const handleExecuteBridge = useCallback(async () => {
     if (!selectedQuote) return;
@@ -220,6 +251,34 @@ export default function DepositPage() {
             )}
 
             <div className="space-y-4">
+              {/* WALLET (EVM wallet selector) */}
+              {evmWallets.length > 1 && (
+                <div className="space-y-2">
+                  <Label>WALLET</Label>
+                  <Select
+                    value={evmAddress ?? undefined}
+                    onValueChange={(addr) => {
+                      const entry = evmWallets.find((w) => w.address === addr);
+                      if (entry) {
+                        setActiveEvmWallet(entry.wallet);
+                        resetQuotes();
+                      }
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {evmWallets.map((w) => (
+                        <SelectItem key={w.address} value={w.address}>
+                          {w.label} · {truncateAddress(w.address)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
               {/* CHAIN */}
               <div className="space-y-2">
                 <Label>CHAIN</Label>
@@ -297,9 +356,34 @@ export default function DepositPage() {
               TO
             </div>
 
-            {isSuiConnected && suiAddress && (
+            {effectiveSuiAddress && (
               <div className="text-[10px] tracking-wide text-muted-foreground mb-3 font-mono">
-                SUI: {truncateAddress(suiAddress)}
+                SUI: {truncateAddress(effectiveSuiAddress)}
+              </div>
+            )}
+
+            {/* SUI wallet selector */}
+            {suiOptions.length > 1 && (
+              <div className="space-y-2 mb-4">
+                <Label>WALLET</Label>
+                <Select
+                  value={selectedSuiAddress ?? undefined}
+                  onValueChange={(addr) => {
+                    setSelectedSuiAddress(addr);
+                    resetQuotes();
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {suiOptions.map((opt) => (
+                      <SelectItem key={opt.address} value={opt.address}>
+                        {opt.label} · {truncateAddress(opt.address)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             )}
 
@@ -491,7 +575,7 @@ export default function DepositPage() {
               >
                 LOGIN WITH PRIVY
               </Button>
-            ) : !isSuiConnected ? (
+            ) : !effectiveSuiAddress ? (
               <Button className="w-full" size="lg" disabled>
                 CONNECT SUI WALLET FIRST
               </Button>
