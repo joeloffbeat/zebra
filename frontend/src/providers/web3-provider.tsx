@@ -20,7 +20,7 @@ function LiFiSuiSync() {
 
   useEffect(() => {
     if (connectionStatus === 'connected' && currentWallet) {
-      setLiFiSuiWallet(currentWallet);
+      setLiFiSuiWallet(currentWallet as any);
     }
   }, [currentWallet, connectionStatus]);
 
