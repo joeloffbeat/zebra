@@ -25,7 +25,7 @@ const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../.env') });
 
 const NETWORK = 'mainnet';
-const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK) });
+const client = new SuiJsonRpcClient({ url: getJsonRpcFullnodeUrl(NETWORK), network: 'mainnet' });
 
 async function getKeypair(): Promise<Ed25519Keypair> {
   const privateKey = process.env.SUI_PRIVATE_KEY;
