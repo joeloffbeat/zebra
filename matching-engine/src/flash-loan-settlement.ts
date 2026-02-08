@@ -18,6 +18,8 @@ const USDC_DECIMALS = 1_000_000;
 // Overestimate is safe — unused DEEP is refunded in the deepCoinResult.
 // Typical taker fee is ~0.1% of trade value paid in DEEP.
 const DEEP_FEE_PER_SWAP = 0.5; // 0.5 DEEP per swap (unused portion is refunded)
+// DeepBook SUI/USDC pool minimum trade size (from on-chain min_size field)
+const DEEPBOOK_MIN_SIZE_SUI = 1.0; // 1 SUI = 1,000,000,000 MIST
 
 export interface FlashLoanSettlementResult {
   success: boolean;
@@ -63,8 +65,9 @@ export class FlashLoanSettlementService {
    * Builds one PTB with sequential flash loan cycles for each sell order.
    * Falls back to per-order execution if batch PTB fails.
    */
-  async settleResidualSells(sells: DecryptedOrderInfo[]): Promise<FlashLoanSettlementResult[]> {
-    if (sells.length === 0) return [];
+  async settleResidualSells(inputSells: DecryptedOrderInfo[]): Promise<FlashLoanSettlementResult[]> {
+    if (inputSells.length === 0) return [];
+    let sells = inputSells;
 
     if (!this.keypair || !config.darkPoolPackage || !config.darkPoolObject || !config.matcherCapId) {
       console.log('FlashLoanSettlement: Not configured (missing package, pool, or matcherCapId)');
@@ -77,6 +80,29 @@ export class FlashLoanSettlementService {
         error: 'Settlement not configured',
       }));
     }
+
+    // Filter out orders below DeepBook's minimum trade size
+    const validSells = sells.filter(s => {
+      const amountSui = Number(s.decryptedLockedAmount) / 1e9;
+      if (amountSui < DEEPBOOK_MIN_SIZE_SUI) {
+        console.warn(`FlashLoanSettlement: Order ${s.commitment.slice(0, 16)}... amount ${amountSui} SUI is below DeepBook min_size ${DEEPBOOK_MIN_SIZE_SUI} SUI — skipping`);
+        logService.addLog('warn', 'flash-loan', `Order ${s.commitment.slice(0, 16)}... (${amountSui} SUI) below DeepBook min_size (${DEEPBOOK_MIN_SIZE_SUI} SUI)`);
+        return false;
+      }
+      return true;
+    });
+
+    const tooSmall = sells.filter(s => Number(s.decryptedLockedAmount) / 1e9 < DEEPBOOK_MIN_SIZE_SUI);
+    const tooSmallResults: FlashLoanSettlementResult[] = tooSmall.map(s => ({
+      success: false,
+      commitment: s.commitment,
+      sellerAddress: s.owner,
+      amountSui: s.decryptedLockedAmount,
+      error: `Order size ${(Number(s.decryptedLockedAmount) / 1e9).toFixed(4)} SUI below DeepBook minimum ${DEEPBOOK_MIN_SIZE_SUI} SUI`,
+    }));
+
+    if (validSells.length === 0) return tooSmallResults;
+    sells = validSells;
 
     // Fetch mid-price for minOut calculation (uses devInspect — reliable)
     const midPrice = await this.deepBookService.getMidPrice('SUI_USDC');
@@ -144,7 +170,7 @@ export class FlashLoanSettlementService {
     // Execute batch PTB (all sells in one transaction)
     try {
       const result = await this.buildAndExecuteBatchPtb(sells, midPrice);
-      if (result) return result;
+      if (result) return [...tooSmallResults, ...result];
     } catch (error) {
       console.warn('FlashLoanSettlement: Batch PTB failed:', error);
       logService.addLog('warn', 'flash-loan', `FlashLoanSettlement: Batch PTB failed: ${error}`);
@@ -152,13 +178,13 @@ export class FlashLoanSettlementService {
 
     // Don't fall back to per-order after an on-chain failure — the gas coin version
     // has changed, causing stale object references. Orders will retry next batch.
-    return sells.map(s => ({
+    return [...tooSmallResults, ...sells.map(s => ({
       success: false,
       commitment: s.commitment,
       sellerAddress: s.owner,
       amountSui: s.decryptedLockedAmount,
       error: 'Batch settlement failed — will retry next batch',
-    }));
+    }))];
   }
 
   /**
