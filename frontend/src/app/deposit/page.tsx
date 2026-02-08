@@ -326,6 +326,7 @@ export default function DepositPage() {
                   value={fromToken}
                   onValueChange={(v) => {
                     setFromToken(v as FromToken);
+                    if (v === "eth" && toToken === "sui") setToToken("usdc");
                     resetQuotes();
                   }}
                 >
@@ -423,8 +424,12 @@ export default function DepositPage() {
                 </SelectTrigger>
                 <SelectContent>
                   {TO_TOKENS.map((token) => (
-                    <SelectItem key={token.id} value={token.id}>
-                      {token.name}
+                    <SelectItem
+                      key={token.id}
+                      value={token.id}
+                      disabled={token.id === "sui" && fromToken === "eth"}
+                    >
+                      {token.name}{token.id === "sui" && fromToken === "eth" ? " (N/A WITH ETH)" : ""}
                     </SelectItem>
                   ))}
                 </SelectContent>
