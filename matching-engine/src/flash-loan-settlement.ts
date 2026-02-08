@@ -134,20 +134,12 @@ export class FlashLoanSettlementService {
       logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Order book unavailable, using mid-price ${midPrice} + minOut protection`);
     }
 
-    // Dry-run a test swap to verify pool has actual liquidity before executing
-    const testSui = Number(sells[0].decryptedLockedAmount) / 1e9;
-    const swapWorks = await this.dryRunSwap(testSui, midPrice);
-    if (!swapWorks) {
-      console.warn('FlashLoanSettlement: Dry-run swap produced 0 USDC — pool has no bid-side liquidity despite mid-price');
-      logService.addLog('warn', 'flash-loan', 'FlashLoanSettlement: Dry-run confirmed no bid-side liquidity — orders will retry next batch');
-      return sells.map(s => ({
-        success: false,
-        commitment: s.commitment,
-        sellerAddress: s.owner,
-        amountSui: s.decryptedLockedAmount,
-        error: 'Pool has no bid-side liquidity (verified via dry-run)',
-      }));
-    }
+    // Dry-run is skipped — it uses CoinWithBalance which fails client-side when the
+    // wallet lacks DEEP tokens, producing a false "0 USDC" result even when the pool
+    // has plenty of liquidity. The mid-price check above + on-chain minOut assertion
+    // provide sufficient protection against actual low-liquidity scenarios.
+    console.log(`FlashLoanSettlement: Proceeding with mid-price ${midPrice}, on-chain minOut will protect against slippage`);
+    logService.addLog('info', 'flash-loan', `FlashLoanSettlement: Proceeding with mid-price ${midPrice}, on-chain minOut protection`);
 
     // Execute batch PTB (all sells in one transaction)
     try {
