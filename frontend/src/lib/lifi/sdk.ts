@@ -1,11 +1,14 @@
-import { createConfig, EVM } from '@lifi/sdk';
+import { createConfig, EVM, Sui } from '@lifi/sdk';
+import type { SuiProvider } from '@lifi/sdk';
 import {
   getWalletClient as getWagmiWalletClient,
   switchChain as wagmiSwitchChain,
 } from '@wagmi/core';
 import type { Config as WagmiConfig } from 'wagmi';
+import type { WalletWithRequiredFeatures } from '@mysten/wallet-standard';
 
 let initialized = false;
+let suiProvider: SuiProvider | null = null;
 
 export function initLiFi(wagmiConfig: WagmiConfig) {
   if (initialized) return;
@@ -22,10 +25,20 @@ export function initLiFi(wagmiConfig: WagmiConfig) {
     },
   });
 
+  suiProvider = Sui();
+
   createConfig({
     integrator: 'zebra-dark-pool',
-    providers: [evmProvider],
+    providers: [evmProvider, suiProvider],
   });
 
   initialized = true;
+}
+
+export function setLiFiSuiWallet(wallet: WalletWithRequiredFeatures) {
+  if (suiProvider) {
+    suiProvider.setOptions({
+      getWallet: () => Promise.resolve(wallet as never),
+    });
+  }
 }
