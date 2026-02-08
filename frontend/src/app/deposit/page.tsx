@@ -1,6 +1,8 @@
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
+import { useBalance, useReadContract } from "wagmi";
+import { erc20Abi } from "viem";
 import {
   Button,
   Input,
@@ -64,6 +66,39 @@ export default function DepositPage() {
   const bothConnected = isPrivyAuthenticated && isSuiConnected;
   const selectedChain = CHAINS.find((c) => c.id === fromChain) || CHAINS[0];
   const selectedToken = TOKENS.find((t) => t.id === fromToken) || TOKENS[0];
+
+  // EVM balances on selected chain
+  const { data: ethBalanceData } = useBalance({
+    address: evmAddress as `0x${string}` | undefined,
+    chainId: selectedChain.chainId,
+  });
+
+  const usdcAddress = USDC_BY_CHAIN[selectedChain.chainId] as `0x${string}` | undefined;
+  const { data: usdcBalanceRaw } = useReadContract({
+    address: usdcAddress,
+    abi: erc20Abi,
+    functionName: "balanceOf",
+    args: evmAddress ? [evmAddress as `0x${string}`] : undefined,
+    chainId: selectedChain.chainId,
+    query: { enabled: !!evmAddress && !!usdcAddress },
+  });
+
+  const evmEthBalance = ethBalanceData
+    ? (Number(ethBalanceData.value) / 1e18).toFixed(6)
+    : "0";
+  const evmUsdcBalance = usdcBalanceRaw != null
+    ? (Number(usdcBalanceRaw) / 1e6).toFixed(2)
+    : "0";
+
+  // Check if user has enough balance for the entered amount
+  const hasInsufficientBalance = useMemo(() => {
+    if (!amount || parseFloat(amount) <= 0) return false;
+    const amountNum = parseFloat(amount);
+    if (fromToken === "eth") {
+      return amountNum > parseFloat(evmEthBalance);
+    }
+    return amountNum > parseFloat(evmUsdcBalance);
+  }, [amount, fromToken, evmEthBalance, evmUsdcBalance]);
 
   const handleNumericInput = (value: string) => {
     if (value === "" || /^\d*\.?\d*$/.test(value)) {
@@ -173,8 +208,14 @@ export default function DepositPage() {
             </div>
 
             {isPrivyAuthenticated && evmAddress && (
-              <div className="text-[10px] tracking-wide text-muted-foreground mb-3 font-mono">
-                EVM: {truncateAddress(evmAddress)}
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-[10px] tracking-wide text-muted-foreground font-mono">
+                  EVM: {truncateAddress(evmAddress)}
+                </div>
+                <div className="flex items-center gap-3 text-[10px] tracking-wide font-mono text-muted-foreground">
+                  <span>{evmEthBalance} ETH</span>
+                  <span>{evmUsdcBalance} USDC</span>
+                </div>
               </div>
             )}
 
@@ -241,6 +282,11 @@ export default function DepositPage() {
                     {selectedToken.name}
                   </span>
                 </div>
+                {hasInsufficientBalance && (
+                  <div className="text-[10px] tracking-wide text-red-500">
+                    INSUFFICIENT {selectedToken.name} BALANCE ON {selectedChain.name}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -455,10 +501,10 @@ export default function DepositPage() {
                 size="lg"
                 onClick={handleGetQuotes}
                 disabled={
-                  !amount || parseFloat(amount) <= 0 || !bothConnected
+                  !amount || parseFloat(amount) <= 0 || !bothConnected || hasInsufficientBalance
                 }
               >
-                GET QUOTES
+                {hasInsufficientBalance ? `INSUFFICIENT ${selectedToken.name} BALANCE` : "GET QUOTES"}
               </Button>
             ) : status === "quoting" ? (
               <Button className="w-full" size="lg" disabled>
