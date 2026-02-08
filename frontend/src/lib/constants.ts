@@ -4,7 +4,7 @@ export const DARK_POOL_OBJECT = '0x1df9882f0a85c9e9e91728b9bc46d6bc8c159cb7dd445
 export const SEAL_PACKAGE_ID = '0x3a82228cc8f999bc737643013626b502a8ba2792725a7d87908d60e00cde5945';
 export const SEAL_ALLOWLIST_ID = '0x745e86aff1e7bf9a368d1b238a7937d8900bad963af752b230b83d363fd617bb';
 export const USDC_TYPE = '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC';
-export const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3006';
+export const MATCHING_ENGINE_URL = process.env.NEXT_PUBLIC_MATCHING_ENGINE_URL || 'http://localhost:3006';
 
 // LiFi cross-chain bridging constants
 export const LIFI_CHAIN_IDS = {

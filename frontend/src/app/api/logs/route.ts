@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { BACKEND_URL } from '@/lib/constants';
+import { MATCHING_ENGINE_URL } from '@/lib/constants';
 
 export async function GET() {
   try {
-    const res = await fetch(`${BACKEND_URL}/logs`, { cache: 'no-store' });
+    const res = await fetch(`${MATCHING_ENGINE_URL}/logs`, { cache: 'no-store' });
     if (!res.ok) {
       return NextResponse.json({ error: 'Backend unavailable' }, { status: res.status });
     }

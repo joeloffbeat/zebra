@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import { BACKEND_URL } from '@/lib/constants';
+import { MATCHING_ENGINE_URL } from '@/lib/constants';
 
 export async function GET() {
   try {
-    const res = await fetch(`${BACKEND_URL}/deepbook/midprice`, {
+    const res = await fetch(`${MATCHING_ENGINE_URL}/deepbook/midprice`, {
       cache: 'no-store',
     });
 
