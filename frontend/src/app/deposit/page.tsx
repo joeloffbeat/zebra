@@ -15,25 +15,44 @@ import { Navbar } from "@/components/zebra";
 import { useWallet } from "@/hooks/use-wallet";
 import { usePrivyWallets } from "@/hooks/use-privy-wallets";
 import { useWalletStore } from "@/lib/stores/wallet-store";
-import { getQuoteToSui, executeBridge } from "@/lib/lifi/bridge";
+import { getAllRoutesToSui, executeBridge } from "@/lib/lifi/bridge";
 import type { BridgeQuote } from "@/lib/lifi/bridge";
-import { LIFI_CHAIN_IDS } from "@/lib/constants";
+import {
+  LIFI_CHAIN_IDS,
+  USDC_BY_CHAIN,
+  NATIVE_ETH_ADDRESS,
+  ETH_DECIMALS,
+  USDC_DECIMALS,
+} from "@/lib/constants";
 
 const CHAINS = [
   { id: "arbitrum", name: "ARBITRUM", chainId: LIFI_CHAIN_IDS.ARBITRUM },
   { id: "base", name: "BASE", chainId: LIFI_CHAIN_IDS.BASE },
 ];
 
+const TOKENS = [
+  { id: "usdc", name: "USDC", decimals: USDC_DECIMALS },
+  { id: "eth", name: "ETH", decimals: ETH_DECIMALS },
+] as const;
+
+type FromToken = (typeof TOKENS)[number]["id"];
 type BridgeStatus = "idle" | "quoting" | "quoted" | "executing" | "success" | "error";
 
 function truncateAddress(address: string): string {
   return `${address.slice(0, 6)}...${address.slice(-4)}`;
 }
 
+function formatTime(seconds: number): string {
+  if (seconds < 60) return `~${seconds}S`;
+  return `~${Math.ceil(seconds / 60)} MIN`;
+}
+
 export default function DepositPage() {
   const [fromChain, setFromChain] = useState("arbitrum");
+  const [fromToken, setFromToken] = useState<FromToken>("usdc");
   const [amount, setAmount] = useState("");
-  const [quote, setQuote] = useState<BridgeQuote | null>(null);
+  const [quotes, setQuotes] = useState<BridgeQuote[]>([]);
+  const [selectedQuote, setSelectedQuote] = useState<BridgeQuote | null>(null);
   const [status, setStatus] = useState<BridgeStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [txHash, setTxHash] = useState<string | null>(null);
@@ -44,58 +63,95 @@ export default function DepositPage() {
 
   const bothConnected = isPrivyAuthenticated && isSuiConnected;
   const selectedChain = CHAINS.find((c) => c.id === fromChain) || CHAINS[0];
+  const selectedToken = TOKENS.find((t) => t.id === fromToken) || TOKENS[0];
 
   const handleNumericInput = (value: string) => {
     if (value === "" || /^\d*\.?\d*$/.test(value)) {
       setAmount(value);
-      setQuote(null);
+      setQuotes([]);
+      setSelectedQuote(null);
       setStatus("idle");
     }
   };
 
-  const handleGetQuote = useCallback(async () => {
+  const resetQuotes = () => {
+    setQuotes([]);
+    setSelectedQuote(null);
+    setStatus("idle");
+  };
+
+  const handleGetQuotes = useCallback(async () => {
     if (!amount || parseFloat(amount) <= 0) return;
     if (!evmAddress || !suiAddress) return;
 
     setStatus("quoting");
     setError(null);
+    setQuotes([]);
+    setSelectedQuote(null);
 
     try {
-      const amountRaw = (parseFloat(amount) * 1e6).toString();
-      const result = await getQuoteToSui(selectedChain.chainId, amountRaw, evmAddress, suiAddress);
-      setQuote(result);
+      const tokenAddress =
+        fromToken === "eth"
+          ? NATIVE_ETH_ADDRESS
+          : USDC_BY_CHAIN[selectedChain.chainId];
+
+      if (!tokenAddress) {
+        throw new Error(`Unsupported source chain: ${selectedChain.chainId}`);
+      }
+
+      const amountRaw = (
+        parseFloat(amount) * Math.pow(10, selectedToken.decimals)
+      ).toFixed(0);
+
+      const results = await getAllRoutesToSui(
+        selectedChain.chainId,
+        tokenAddress,
+        amountRaw,
+        evmAddress,
+        suiAddress,
+      );
+
+      setQuotes(results);
+
+      if (results.length === 1) {
+        setSelectedQuote(results[0]);
+      } else if (results.length > 1) {
+        // Auto-select the first (recommended) route
+        setSelectedQuote(results[0]);
+      }
+
       setStatus("quoted");
     } catch (err) {
-      console.error('[LiFi] Quote failed:', err);
-      setError(err instanceof Error ? err.message : 'Failed to get quote');
+      console.error("[LiFi] Quote failed:", err);
+      setError(err instanceof Error ? err.message : "Failed to get quotes");
       setStatus("error");
     }
-  }, [amount, evmAddress, suiAddress, selectedChain.chainId]);
+  }, [amount, evmAddress, suiAddress, selectedChain.chainId, fromToken, selectedToken.decimals]);
 
   const handleExecuteBridge = useCallback(async () => {
-    if (!quote) return;
+    if (!selectedQuote) return;
 
     setStatus("executing");
     setError(null);
 
     try {
-      const result = await executeBridge(quote.route);
+      const result = await executeBridge(selectedQuote.route);
       if (result.txHash) setTxHash(result.txHash);
       setStatus("success");
     } catch (err) {
-      console.error('[LiFi] Bridge failed:', err);
-      setError(err instanceof Error ? err.message : 'Bridge execution failed');
+      console.error("[LiFi] Bridge failed:", err);
+      setError(err instanceof Error ? err.message : "Bridge execution failed");
       setStatus("error");
     }
-  }, [quote]);
+  }, [selectedQuote]);
 
-  const estimatedOutput = quote
-    ? (Number(quote.estimatedOutput) / 1e6).toFixed(2)
+  const estimatedOutput = selectedQuote
+    ? (Number(selectedQuote.estimatedOutput) / 1e6).toFixed(2)
     : null;
 
-  const estimatedTime = quote
-    ? `~${Math.ceil(quote.estimatedTime / 60)} MIN`
-    : "~3 MIN";
+  const estimatedTime = selectedQuote
+    ? formatTime(selectedQuote.estimatedTime)
+    : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -105,7 +161,7 @@ export default function DepositPage() {
         <div className="text-center mb-12">
           <h1 className="text-lg tracking-widest mb-2">DEPOSIT</h1>
           <p className="text-xs tracking-wide text-muted-foreground">
-            BRIDGE USDC FROM ARBITRUM OR BASE TO SUI
+            BRIDGE TO SUI VIA LI.FI
           </p>
         </div>
 
@@ -126,7 +182,13 @@ export default function DepositPage() {
               {/* CHAIN */}
               <div className="space-y-2">
                 <Label>CHAIN</Label>
-                <Select value={fromChain} onValueChange={(v) => { setFromChain(v); setQuote(null); setStatus("idle"); }}>
+                <Select
+                  value={fromChain}
+                  onValueChange={(v) => {
+                    setFromChain(v);
+                    resetQuotes();
+                  }}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -140,12 +202,27 @@ export default function DepositPage() {
                 </Select>
               </div>
 
-              {/* TOKEN (USDC only) */}
+              {/* TOKEN */}
               <div className="space-y-2">
                 <Label>TOKEN</Label>
-                <div className="flex items-center h-10 px-3 border border-border text-xs tracking-widest">
-                  USDC
-                </div>
+                <Select
+                  value={fromToken}
+                  onValueChange={(v) => {
+                    setFromToken(v as FromToken);
+                    resetQuotes();
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {TOKENS.map((token) => (
+                      <SelectItem key={token.id} value={token.id}>
+                        {token.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* AMOUNT */}
@@ -161,7 +238,7 @@ export default function DepositPage() {
                     className="flex-1"
                   />
                   <span className="text-xs tracking-widest text-muted-foreground">
-                    USDC
+                    {selectedToken.name}
                   </span>
                 </div>
               </div>
@@ -191,15 +268,84 @@ export default function DepositPage() {
             </div>
           </div>
 
-          {/* ROUTE SECTION */}
-          {quote && (
+          {/* AVAILABLE ROUTES */}
+          {status === "quoted" && (
+            <div className="p-6 border-b border-border">
+              <div className="text-xs tracking-widest text-muted-foreground mb-4">
+                AVAILABLE ROUTES
+              </div>
+
+              {quotes.length === 0 ? (
+                <div className="text-xs tracking-wide text-muted-foreground text-center py-6">
+                  NO ROUTES AVAILABLE FOR THIS AMOUNT
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {quotes.map((q, i) => {
+                    const isSelected = selectedQuote?.route.id === q.route.id;
+                    const output = (Number(q.estimatedOutput) / 1e6).toFixed(2);
+                    const time = formatTime(q.estimatedTime);
+
+                    return (
+                      <button
+                        key={q.route.id}
+                        type="button"
+                        onClick={() => setSelectedQuote(q)}
+                        className={`w-full text-left border p-4 transition-colors ${
+                          isSelected
+                            ? "border-foreground"
+                            : "border-border hover:border-muted-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2 mb-2">
+                          <span
+                            className={`w-3 h-3 rounded-full border ${
+                              isSelected
+                                ? "border-foreground bg-foreground"
+                                : "border-muted-foreground"
+                            }`}
+                          />
+                          {q.bridgeLogo && (
+                            <img
+                              src={q.bridgeLogo}
+                              alt=""
+                              className="w-4 h-4 rounded-full"
+                            />
+                          )}
+                          <span className="text-xs tracking-widest font-medium">
+                            {q.bridgeName.toUpperCase()}
+                          </span>
+                          {q.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="text-[9px] tracking-wider px-1.5 py-0.5 border border-border text-muted-foreground"
+                            >
+                              {tag}
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-4 text-xs text-muted-foreground ml-5">
+                          <span className="font-mono">~{output} USDC</span>
+                          <span>{time}</span>
+                          <span className="font-mono">GAS ~${q.gasCostUSD}</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* ROUTE STEPS (for selected quote) */}
+          {selectedQuote && status === "quoted" && (
             <div className="p-6 border-b border-border">
               <div className="text-xs tracking-widest text-muted-foreground mb-4">
                 ROUTE
               </div>
 
               <div className="space-y-3 text-xs">
-                {quote.steps.map((step, i) => (
+                {selectedQuote.steps.map((step, i) => (
                   <div key={i}>
                     <div className="flex items-center gap-2">
                       <span className="w-4 h-4 border border-border flex items-center justify-center text-[8px]">
@@ -210,14 +356,14 @@ export default function DepositPage() {
                       </span>
                       <span>{step.tool.toUpperCase()}</span>
                     </div>
-                    {i < quote.steps.length - 1 && (
+                    {i < selectedQuote.steps.length - 1 && (
                       <div className="ml-2 h-4 border-l border-border" />
                     )}
                   </div>
                 ))}
                 <div className="flex items-center gap-2">
                   <span className="w-4 h-4 border border-border flex items-center justify-center text-[8px]">
-                    {quote.steps.length + 1}
+                    {selectedQuote.steps.length + 1}
                   </span>
                   <span className="text-muted-foreground">RECEIVE ON</span>
                   <span>SUI</span>
@@ -228,20 +374,33 @@ export default function DepositPage() {
 
           {/* SUMMARY */}
           <div className="p-6 border-b border-border space-y-3">
+            <div className="text-xs tracking-widest text-muted-foreground mb-2">
+              SUMMARY
+            </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="tracking-widest text-muted-foreground">YOU RECEIVE</span>
+              <span className="tracking-widest text-muted-foreground">
+                YOU RECEIVE
+              </span>
               <span className="font-mono">
                 {estimatedOutput ? `~${estimatedOutput} USDC` : "\u2014"}
               </span>
             </div>
             <div className="flex items-center justify-between text-xs">
-              <span className="tracking-widest text-muted-foreground">EST. TIME</span>
-              <span>{quote ? estimatedTime : "\u2014"}</span>
+              <span className="tracking-widest text-muted-foreground">
+                EST. TIME
+              </span>
+              <span>{estimatedTime ?? "\u2014"}</span>
             </div>
             <div className="flex items-center justify-between text-xs">
               <span className="tracking-widest text-muted-foreground">GAS</span>
               <span className="font-mono">
-                {quote ? `~$${quote.gasCostUSD}` : "\u2014"}
+                {selectedQuote ? `~$${selectedQuote.gasCostUSD}` : "\u2014"}
+              </span>
+            </div>
+            <div className="flex items-center justify-between text-xs">
+              <span className="tracking-widest text-muted-foreground">FEES</span>
+              <span className="font-mono">
+                {selectedQuote ? `~$${selectedQuote.totalFeesUSD}` : "\u2014"}
               </span>
             </div>
           </div>
@@ -279,7 +438,11 @@ export default function DepositPage() {
           {/* SUBMIT */}
           <div className="p-6">
             {!isPrivyAuthenticated ? (
-              <Button className="w-full" size="lg" onClick={() => loginWithPrivy()}>
+              <Button
+                className="w-full"
+                size="lg"
+                onClick={() => loginWithPrivy()}
+              >
                 LOGIN WITH PRIVY
               </Button>
             ) : !isSuiConnected ? (
@@ -290,22 +453,28 @@ export default function DepositPage() {
               <Button
                 className="w-full"
                 size="lg"
-                onClick={handleGetQuote}
-                disabled={!amount || parseFloat(amount) <= 0 || !bothConnected}
+                onClick={handleGetQuotes}
+                disabled={
+                  !amount || parseFloat(amount) <= 0 || !bothConnected
+                }
               >
-                GET QUOTE
+                GET QUOTES
               </Button>
             ) : status === "quoting" ? (
               <Button className="w-full" size="lg" disabled>
-                FETCHING QUOTE...
+                FETCHING QUOTES...
               </Button>
-            ) : status === "quoted" ? (
+            ) : status === "quoted" && selectedQuote ? (
               <Button
                 className="w-full"
                 size="lg"
                 onClick={handleExecuteBridge}
               >
-                BRIDGE {amount} USDC TO SUI
+                BRIDGE {amount} {selectedToken.name} TO SUI
+              </Button>
+            ) : status === "quoted" && !selectedQuote ? (
+              <Button className="w-full" size="lg" disabled>
+                SELECT A ROUTE
               </Button>
             ) : status === "executing" ? (
               <Button className="w-full" size="lg" disabled>
@@ -315,7 +484,12 @@ export default function DepositPage() {
               <Button
                 className="w-full"
                 size="lg"
-                onClick={() => { setStatus("idle"); setQuote(null); setAmount(""); }}
+                onClick={() => {
+                  setStatus("idle");
+                  setQuotes([]);
+                  setSelectedQuote(null);
+                  setAmount("");
+                }}
               >
                 BRIDGE AGAIN
               </Button>
